@@ -4,7 +4,7 @@ import Base from '../layouts/Base.astro';
 import AppHeader from '../components/AppHeader.astro';
 import Phone from '../components/stage/Phone.astro';
 import { ALERT_AMOUNT, RAPID_FROM, STOP_AMOUNT } from '../data/network';
-import { institutions, sampleBills } from '../data/bills';
+import { institutions, localBills, sampleBills } from '../data/bills';
 import { money } from '../lib/format';
 
 const how = [
@@ -13,7 +13,10 @@ const how = [
   { when: `${money(STOP_AMOUNT)} or more`, then: 'Stopped by a typology' },
   { when: `The account's payment no. ${RAPID_FROM} or later`, then: 'Counts one level higher' },
 ];
-const bills = Object.entries(sampleBills).map(([ref, r]) => ({ ref, total: money(Number(r.total), r.currency) }));
+const bills = Object.entries(sampleBills).map(([ref, r]) => ({
+  ref,
+  total: ref in localBills ? `${money(Number(r.total), r.currency)}, local` : 'Live API',
+}));
 ---
 
 <Base title="Sender-initiated payment">
@@ -51,11 +54,11 @@ const bills = Object.entries(sampleBills).map(([ref, r]) => ({ ref, total: money
         }
         <tr>
           <th scope="row">Any other 10-character reference</th>
-          <td>The API's standard bill, PKR 100,000.00</td>
+          <td>Live API</td>
         </tr>
       </tbody>
     </table>
-    <p class="how-note">Invented for the demo; bill 1234567890 is the API's own reply. Clear all resets the payment count.</p>
+    <p class="how-note">The screening rules and the two local bills are invented for the demo. Every other lookup goes to RSOP's live bill inquiry API. Clear all resets the payment count.</p>
   </div>
 </Base>
 

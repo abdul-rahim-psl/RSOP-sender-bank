@@ -7,6 +7,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "serve": "node server/serve.mjs",
     "check": "astro check && npm run check:data",
     "check:data": "node --test tests/*.test.ts"
   },

@@ -4,8 +4,9 @@
 
 - [Goal](#goal)
 - [Source and content rules](#source-and-content-rules)
-- [Bill inquiry](#bill-inquiry)
+- [Bill inquiry and payment](#bill-inquiry-and-payment)
   - [The API](#the-api)
+  - [Bill payment](#bill-payment)
   - [The mock](#the-mock)
 - [What changes from the reference screen](#what-changes-from-the-reference-screen)
 - [Layout](#layout)
@@ -24,7 +25,7 @@ A one-screen, clickable demo of a sender-initiated bill payment. The phone is th
 | Source | Used for |
 |---|---|
 | [pics/UI for sender.png](../pics/UI%20for%20sender.png) | The phone, the nine message dots, and the rule and typology numbers the mock screening uses |
-| RSOP's `POST /api/v1/billInquiry` | The phone's two inputs and the bill's shape; see [Bill inquiry](#bill-inquiry) |
+| RSOP's `POST /api/v1/billInquiry` and `POST /api/v1/billPayment` | The phone's two inputs, the bill's shape, and what Pay sends; see [Bill inquiry and payment](#bill-inquiry-and-payment) |
 | `RSOP demo 2/` | Development rules, stack, tokens, fonts, theme toggle, header, popover and status conventions |
 
 1. **The API is the authority for the bill.** Its two inputs are the phone's only inputs. Its reply fields and their order are what the phone shows.
@@ -33,7 +34,7 @@ A one-screen, clickable demo of a sender-initiated bill payment. The phone is th
 4. **Fictional data only.** The account holder is invented. Phone numbers use the 555-01xx range set aside for fiction.
 5. **Mock outcomes are labelled as mock.** The screening outcomes come from invented rules of thumb, not from real rule or typology logic. The header's Mock data label and How it decides say so.
 
-## Bill inquiry
+## Bill inquiry and payment
 
 ### The API
 
@@ -68,9 +69,31 @@ All of the following were checked live on 2026-10-21 at about 23:25 PKT:
   - From the demo at `http://127.0.0.1:4393`, Chrome reports: "blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present".
   - From the tunnel's `https` address, Chrome refuses earlier, before CORS: a public page may not call a private address ("Permission was denied for this request to access the `unknown` address space"). Allowing CORS on the API would not fix this case; only a proxy on the demo's own origin would.
 
+### Bill payment
+
+The request and reply, as run with curl by the user on 2026-10-21 against `10.0.70.144`, the same API on its other address:
+
+```http
+POST /api/v1/billPayment
+Content-Type: application/json
+Charset: UTF-8
+Sender-Participant-Code, Receiver-Participant-Code, Sender-User-Code, X-Request-ID
+
+{ "billId": "852147", "billReference": "123", "totalAmount": "100000" }
+```
+
+```json
+{"statusCode":0,"description":"SUCCESS"}
+```
+
+- The body carries the bill ID, the bill reference and the total from the inquiry, all as strings.
+- Pay sends it only after the payment clears screening. A payment stopped at screening never reaches the biller.
+- `statusCode` 0 means paid. Any other code, or no answer, ends in "Payment failed" with the biller's description, and the balance is unchanged. Only SUCCESS has been seen so far.
+- The API's address is one setting, `API_BASE` in `src/data/api.ts`, set to `http://192.168.9.15:9991`. The page does not call it; see the CORS findings in [The API](#the-api).
+
 ### The mock
 
-`billInquiry()` in `src/lib/biller.ts` takes the same request and returns the same reply shape, from `src/data/bills.ts`:
+`billInquiry()` and `billPayment()` in `src/lib/biller.ts` take the same requests and return the same reply shapes. `billPayment()` answers `{"statusCode":0,"description":"SUCCESS"}`, as the API did. `billInquiry()` answers from `src/data/bills.ts`:
 
 | Bill reference | Total | Source | Outcome |
 |---|---|---|---|
@@ -79,7 +102,7 @@ All of the following were checked live on 2026-10-21 at about 23:25 PKT:
 | 7890123456 | PKR 1,250,000 | Invented, same split and accounts | Stopped |
 | Any other valid reference | PKR 100,000 | The API's reply, with the reference echoed, as the live API does | No alert |
 
-The mock matches on the bill reference only. A reply whose `statusCode` is not 0 still shows "No bill found" on the phone, though neither the mock nor the live API has produced one. Replacing `billInquiry()` with a server-side call to the API is the only change a live version needs.
+The mock matches on the bill reference only. A reply whose `statusCode` is not 0 still shows "No bill found" on the phone, though neither the mock nor the live API has produced one. Replacing `billInquiry()` and `billPayment()` with server-side calls to the API is the only change a live version needs.
 
 ## What changes from the reference screen
 
@@ -109,7 +132,8 @@ The phone has three screens: the bill form, a busy screen while looking up, and 
 2. Press Look up bill. The phone shows the bill: institution, bill reference and bill ID, the four components with their accounts, the total, and the status Unpaid.
 3. Press Pay. The status changes to "Payment in screening", and the dots under it light up to the middle one, which stands for screening.
 4. The payment pauses at the screening dot.
-5. If nothing interdicts, the dots carry on to the biller, each component ticks green, the status says Paid with the payment reference, and the balance drops by the total. If something interdicts, the trail stops at screening, each component shows not paid, and the status says the payment was stopped.
+5. If something interdicts, the trail stops red at screening, each component shows not paid, and the status says the payment was stopped. The biller is never called.
+6. Otherwise the phone sends the bill payment to the biller ("Sending the payment to FBR…"). On SUCCESS the dots carry on to the biller, each component ticks green, the status shows the payment reference and the biller's answer, and the balance drops by the total. On any other answer the last dot turns red and the status says "Payment failed" with the biller's description.
 
 ## Mock screening
 
@@ -149,6 +173,10 @@ As in RSOP demo 2: Astro 7.3 with static output, strict TypeScript, hand-written
 | Phone-width windows | No frame; the app fills the window | Unconfirmed |
 | Keep a debtors list? | No; one fictional account holder | Confirmed 2026-10-21 |
 | Where the bill comes from | A local mock in the API's reply shape | Confirmed 2026-10-21 |
+| How Pay reaches billPayment | A local mock in the API's request and reply shape | Confirmed 2026-10-21 |
+| API address | One setting, `192.168.9.15:9991` | Confirmed 2026-10-21 |
+| When Pay calls billPayment | Only after screening passes | Confirmed 2026-10-21 |
+| A billPayment answer other than SUCCESS | "Payment failed" with the biller's description; balance unchanged | Unconfirmed |
 | Institution | A dropdown with FBR only | Confirmed 2026-10-21 |
 | Bill reference | Exactly 10 letters or digits | Confirmed 2026-10-21 |
 | Any other valid reference | The API's standard bill, as the live API answers | Unconfirmed |

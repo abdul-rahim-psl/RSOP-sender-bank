@@ -4,12 +4,12 @@
 import { rules, typologies } from '../data/network';
 import { account } from '../data/account';
 import { institutions } from '../data/bills';
-import { billInquiry, billRefProblem, toBill, type Bill } from '../lib/biller';
+import { billInquiry, billPayment, billRefProblem, paymentRequest, toBill, type Bill } from '../lib/biller';
 import { money } from '../lib/format';
 import { hash, screen, type Screening, type Tone } from '../lib/screen';
 
 type Mode = 'form' | 'busy' | 'bill';
-type Stage = 'open' | 'paying' | 'paid' | 'alert' | 'stopped';
+type Stage = 'open' | 'paying' | 'paid' | 'alert' | 'stopped' | 'failed';
 
 const q = <T extends Element = HTMLElement>(sel: string, root: ParentNode = document) => root.querySelector<T>(sel)!;
 const qa = <T extends Element = HTMLElement>(sel: string, root: ParentNode = document) => [...root.querySelectorAll<T>(sel)];
@@ -91,6 +91,7 @@ const STATUS: Record<Stage, { tone: Tone; line: Tone | null; word: string; title
   paid: { tone: 'ok', line: 'ok', word: 'paid', title: 'Paid' },
   alert: { tone: 'warn', line: 'ok', word: 'paid', title: 'Paid, with an alert for review' },
   stopped: { tone: 'fail', line: 'fail', word: 'not paid', title: 'Not paid: stopped at screening' },
+  failed: { tone: 'fail', line: 'fail', word: 'not paid', title: 'Payment failed' },
 };
 
 /** Fills the bill and sets its stage; the stage drives the lights, the status and which button shows. */
@@ -130,27 +131,26 @@ function resetPath() {
   dots.forEach((d) => d.removeAttribute('data-tone'));
 }
 
-async function replay(res: Screening, token: number) {
-  const alive = async (ms: number) => (await sleep(ms), token === run);
+/** Waits, then says whether this run is still the current one (Clear all bumps it). */
+const alive = async (ms: number, token: number) => (await sleep(ms), token === run);
 
-  // The payment travels to the screening gate.
+/** Lights the dots up to the screening gate and holds there; false when Clear all cut it short. */
+async function toGate(token: number) {
   for (let i = 0; i < gate; i++) {
     dots[i]!.dataset.tone = 'info';
-    if (!(await alive(110))) return false;
+    if (!(await alive(110, token))) return false;
   }
   dots[gate]!.dataset.tone = 'wait';
   q('[data-b-status-sub]').textContent = 'Screening the payment…';
+  return alive(1400, token);
+}
 
-  if (!(await alive(1400))) return false;
-
-  if (res.delivered) {
-    dots.slice(0, gate + 1).forEach((d) => (d.dataset.tone = 'ok'));
-    for (let i = gate + 1; i < dots.length; i++) {
-      dots[i]!.dataset.tone = 'ok';
-      if (!(await alive(110))) return false;
-    }
-  } else {
-    dots[gate]!.dataset.tone = 'fail';
+/** Past the gate: green to the biller when it accepted, or red on the last dot when it refused. */
+async function toBiller(accepted: boolean, token: number) {
+  dots.slice(0, gate + 1).forEach((d) => (d.dataset.tone = 'ok'));
+  for (let i = gate + 1; i < dots.length; i++) {
+    dots[i]!.dataset.tone = accepted || i < dots.length - 1 ? 'ok' : 'fail';
+    if (!(await alive(110, token))) return false;
   }
   return true;
 }
@@ -165,7 +165,19 @@ async function lookup() {
   q('[data-s-text]').textContent = `Bill ${ref} at ${inst}`;
   setMode('busy');
 
-  const [res] = await Promise.all([billInquiry({ institution: inst, billReference: ref }), sleep(700)]);
+  let res;
+  try {
+    [res] = await Promise.all([billInquiry({ institution: inst, billReference: ref }), sleep(700)]);
+  } catch (e) {
+    if (token !== run) return;
+    setBusy(false);
+    setMode('form');
+    renderForm();
+    hint.textContent = `Couldn't look the bill up (${(e as Error).message}). Try again.`;
+    hint.dataset.error = 'true';
+    lookupBtn.focus();
+    return;
+  }
   if (token !== run) return;
   setBusy(false);
 
@@ -191,20 +203,35 @@ async function pay() {
   setBusy(true);
 
   const id = `TX-${(hash(`${Date.now()}|${++seq}`) & 0xffffff).toString(16).toUpperCase().padStart(6, '0')}`;
-  const res = screen(rules, typologies, { id, amount: b.total, priorSends: sends++ });
+  const res: Screening = screen(rules, typologies, { id, amount: b.total, priorSends: sends++ });
 
   resetPath();
   renderBill(b, 'paying', `${money(b.total, b.currency)} on its way to ${b.institution}`);
+  if (!(await toGate(token))) return;
 
-  if (!(await replay(res, token))) return;
-
-  const alert = res.adjudicator === 'ALRT';
-  if (res.delivered) balance = Math.round((balance - b.total) * 100) / 100;
-  renderBill(
-    b,
-    !res.delivered ? 'stopped' : alert ? 'alert' : 'paid',
-    res.delivered ? `Ref ${id}` : `Ref ${id} · balance unchanged`,
-  );
+  // Only a payment that clears screening is sent to the biller.
+  let stage: Stage;
+  let sub: string;
+  if (!res.delivered) {
+    dots[gate]!.dataset.tone = 'fail';
+    stage = 'stopped';
+    sub = `Ref ${id} · balance unchanged`;
+  } else {
+    q('[data-b-status-sub]').textContent = `Sending the payment to ${b.institution}…`;
+    const [reply] = await Promise.all([billPayment(paymentRequest(b)).catch(() => null), sleep(600)]);
+    if (token !== run) return;
+    const accepted = reply?.statusCode === 0;
+    if (!(await toBiller(accepted, token))) return;
+    if (accepted) {
+      balance = Math.round((balance - b.total) * 100) / 100;
+      stage = res.adjudicator === 'ALRT' ? 'alert' : 'paid';
+      sub = `Ref ${id} · ${b.institution}: ${reply!.description}`;
+    } else {
+      stage = 'failed';
+      sub = `${b.institution}: ${reply?.description || 'no answer'} · balance unchanged`;
+    }
+  }
+  renderBill(b, stage, sub);
 
   setBusy(false);
   renderForm();

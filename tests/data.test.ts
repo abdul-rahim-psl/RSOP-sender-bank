@@ -4,9 +4,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { INTERDICT_AT, HIT_WEIGHT, rules, typologies } from '../src/data/network.ts';
 import { account, initials } from '../src/data/account.ts';
-import { BILL_REF_LENGTH, institutions, sampleBills } from '../src/data/bills.ts';
+import { BILL_REF_LENGTH, institutions, localBills, sampleBills } from '../src/data/bills.ts';
 import { band } from '../src/lib/screen.ts';
-import { billInquiry, billRefProblem, toBill } from '../src/lib/biller.ts';
+import { billInquiry, billPayment, billRefProblem, paymentRequest, toBill } from '../src/lib/biller.ts';
+import { endpoints } from '../src/data/api.ts';
 
 const unique = (xs: string[]) => new Set(xs).size === xs.length;
 
@@ -44,14 +45,32 @@ test('the institution list is FBR only', () => {
   assert.deepEqual(institutions, ['FBR']);
 });
 
-test('bill 1234567890 answers exactly as the API did', async () => {
-  const res = await billInquiry({ institution: 'FBR', billReference: '1234567890' });
+// Stands in for the page's own server: records what was posted and answers with the captured reply.
+const fakePost = () => {
+  const calls: { path: string; body: unknown }[] = [];
+  const post = async (path: string, body: unknown) => (calls.push({ path, body }), JSON.parse(apiSample));
+  return { calls, post };
+};
+
+test('a lookup posts the institution and trimmed reference to the API, and returns its reply unchanged', async () => {
+  const { calls, post } = fakePost();
+  const res = await billInquiry({ institution: 'FBR', billReference: ' 1234567890 ' }, post);
+  assert.deepEqual(calls, [{ path: '/api/v1/billInquiry', body: { institution: 'FBR', billReference: '1234567890' } }]);
   assert.equal(JSON.stringify(res), apiSample);
 });
 
-test("any other reference gets the API's standard bill, with the reference echoed", async () => {
-  const res = await billInquiry({ institution: 'FBR', billReference: ' ZX90PQ12AB ' });
-  assert.equal(JSON.stringify(res), apiSample.replace('"1234567890"', '"ZX90PQ12AB"'));
+test('the invented demo bills answer locally, without calling the API', async () => {
+  const { calls, post } = fakePost();
+  for (const ref of Object.keys(localBills)) {
+    const res = await billInquiry({ institution: 'FBR', billReference: ref }, post);
+    assert.equal(res.billReference, ref);
+  }
+  assert.deepEqual(calls, []);
+  assert.deepEqual(Object.keys(localBills), ['4567890123', '7890123456']);
+});
+
+test('the captured demo bill 1234567890 is what the API answered', () => {
+  assert.equal(JSON.stringify(sampleBills['1234567890']), apiSample);
 });
 
 test('every demo bill has a valid reference, adds up, and the account can pay it', () => {
@@ -83,4 +102,16 @@ test('a bill reference is exactly 10 letters or digits', () => {
 
 test('a reply that is not SUCCESS gives no bill', () => {
   assert.equal(toBill('FBR', { statusCode: 1, description: 'BILL NOT FOUND' }), null);
+});
+
+test('the page calls the API paths on its own server', () => {
+  assert.equal(endpoints.billInquiry, '/api/v1/billInquiry');
+  assert.equal(endpoints.billPayment, '/api/v1/billPayment');
+});
+
+test('paying a looked-up bill sends its ID, reference and total, as the API takes them', async () => {
+  const bill = toBill('FBR', await billInquiry({ institution: 'FBR', billReference: '1234567890' }, fakePost().post))!;
+  const req = paymentRequest(bill);
+  assert.equal(JSON.stringify(req), '{"billId":"12345","billReference":"1234567890","totalAmount":"100000"}');
+  assert.equal(JSON.stringify(await billPayment(req)), '{"statusCode":0,"description":"SUCCESS"}');
 });

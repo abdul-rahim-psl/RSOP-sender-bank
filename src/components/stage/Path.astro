@@ -6,20 +6,19 @@ const DOTS = 9;
 const GATE = Math.floor(DOTS / 2);
 ---
 
-<div class="path" data-path data-gate={GATE}>
-  <ol class="dots" aria-hidden="true">
+<div class="path" aria-hidden="true" data-path data-gate={GATE}>
+  <ol class="dots">
     {
       Array.from({ length: DOTS }, (_, i) => (
         <li class:list={['dot', { gate: i === GATE }]} data-dot={i}>
-          {i === GATE && <Icon name="shield" size={15} />}
+          {i === GATE && <Icon name="shield" size={13} />}
         </li>
       ))
     }
   </ol>
-  <div class="path-labels" aria-hidden="true">
+  <div class="path-labels">
     <span>Sent</span>
     <span>Screening</span>
     <span>Delivered</span>
   </div>
-  <p class="path-caption" aria-live="polite" data-path-caption>Waiting for a payment</p>
 </div>

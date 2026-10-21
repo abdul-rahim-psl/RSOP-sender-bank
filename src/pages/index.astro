@@ -2,10 +2,7 @@
 import '../styles/demo.css';
 import Base from '../layouts/Base.astro';
 import AppHeader from '../components/AppHeader.astro';
-import Icon from '../components/Icon.astro';
 import Phone from '../components/stage/Phone.astro';
-import Path from '../components/stage/Path.astro';
-import BillPanel from '../components/stage/BillPanel.astro';
 import { ALERT_AMOUNT, RAPID_FROM, STOP_AMOUNT } from '../data/network';
 import { SAMPLE_INSTITUTION, sampleBills } from '../data/bills';
 import { money } from '../lib/format';
@@ -22,25 +19,8 @@ const bills = Object.entries(sampleBills).map(([ref, r]) => ({ ref, total: money
 <Base title="Sender-initiated payment">
   <AppHeader />
   <main class="demo" id="main" data-demo>
-    <div class="intro">
-      <div>
-        <h1 class="title">Sender-initiated payment<span class="pd">.</span></h1>
-        <p>
-          Enter an institution and a bill reference on the phone, look up the bill and pay it. The payment is screened
-          before it reaches the biller.
-        </p>
-      </div>
-      <button class="btn" type="button" popovertarget="how">
-        <Icon name="info" size={16} />
-        How it decides
-      </button>
-    </div>
-
-    <section class="stage" aria-label="Payment">
-      <Phone />
-      <Path />
-      <BillPanel />
-    </section>
+    <h1 class="sr-only">Sender-initiated payment: look up a bill on the phone and pay it</h1>
+    <Phone />
   </main>
 
   <div id="how" class="pop glass" popover>

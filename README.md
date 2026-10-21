@@ -13,7 +13,7 @@
 
 ## Overview
 
-A one-screen, frontend-only demo of a sender-initiated bill payment. On the phone, the account holder enters an institution and a bill reference, looks the bill up, and pays it. The message path shows the payment pass through screening, and the Bill panel shows which of the bill's accounts were paid.
+A one-screen, frontend-only demo of a sender-initiated bill payment. The phone is the whole page: centred, and as tall as the window on a laptop. On it, the account holder enters an institution and a bill reference, looks the bill up and pays it. The bill shows each component's account; while paying, a message path shows the payment pass through screening, then each account shows paid or not paid.
 
 The bill inquiry takes the shape of RSOP's `POST /api/v1/billInquiry`: `institution` and `billReference` in; bill ID, total, currency and one account per component out. The page answers from a local mock in that exact shape, and connects to nothing.
 
@@ -21,7 +21,7 @@ The screen's structure comes from the debtor half of [pics/UI for sender.png](pi
 
 | Route | Screen |
 |---|---|
-| `/` | The phone, the message path and the Bill panel |
+| `/` | The phone, centred; the bill and the message path are on it |
 
 ## Run locally
 
@@ -59,7 +59,7 @@ This runs two things:
 | The account holder and currency | `src/data/account.ts` |
 | Rule and typology numbers, thresholds, amount bands (used by the mock screening; not shown on screen) | `src/data/network.ts` |
 | The mock screening | `src/lib/screen.ts` |
-| Phone, message path, Bill panel | `src/components/stage/` |
+| Phone (form, bill, result) and the message path on it | `src/components/stage/` |
 | Behaviour: lookup, payment, the replay, Clear all | `src/scripts/demo.ts` |
 | Layout and components | `src/styles/demo.css` |
 | Colour, type and glass tokens, shared with RSOP demo 2 | `src/styles/global.css` |
@@ -69,32 +69,36 @@ To call the real API instead of the mock, replace the body of `billInquiry()` in
 ## How it behaves
 
 1. Type an institution and a bill reference, or tap a demo bill. Each demo bill fills in institution `abc` and its reference: 123, 456 or 789.
-2. Press Look up bill. The phone shows the bill's total and its four components. The Bill panel shows the same bill with each component's account, marked Unpaid. An unknown reference keeps you on the form with "No bill found".
-3. Press Pay. The dots run to the middle one, which stands for screening, and pause there while the phone says Screening….
-4. If nothing interdicts, the dots carry on to the biller, every component in the Bill panel ticks green, and the balance drops by the total. Otherwise the trail stops red at screening, every component shows ✗ not paid, and the balance stays the same.
+2. Press Look up bill. The phone shows the bill: institution, bill reference and bill ID; the four components with their accounts and amounts; the total; and the status, Unpaid. An unknown reference keeps you on the form with "No bill found".
+3. Press Pay. The bill stays on screen with the status "Payment in screening". Nine dots appear under it, run to the middle one, which stands for screening, and pause there.
+4. If nothing interdicts, the dots carry on to the biller, every component ticks green, the status says Paid with the payment reference, and the balance drops by the total. Otherwise the trail stops red at screening, every component shows ✗ not paid, and the balance stays the same. Pay another bill returns to the form.
 
 The three demo bills give the three outcomes: 123 (PKR 100,000, the API's own sample) no alert, 456 (PKR 450,000) an alert but paid, 789 (PKR 1,250,000) stopped. The mock rules are listed in "How it decides" on the page and in [docs/plan.md](docs/plan.md#mock-screening). They are invented and are not real rule or typology logic.
 
-Change bill goes back to the form with what you typed. Clear all resets the fields, the bill, the balance and the payment count, and stops a lookup or payment in progress.
+The back arrow on the bill goes back to the form with what you typed. Clear all resets the fields, the bill, the balance and the payment count, and stops a lookup or payment in progress.
 
 ## Design
 
-- **The family look.** RSOP demo 2's tokens, fonts (EB Garamond and Nunito, both under the SIL Open Font License), header, theme toggle and popover. Dark is the default.
-- **The reference screen's lights**, redrawn for the phone's result, the Bill panel's components and its status. An unlit light is a grey bulb. A lit one carries an icon as well as a colour: ✓ paid, ! paid with an alert, ✗ stopped or not paid, clock unpaid.
+- **The family look.** RSOP demo 2's tokens, fonts (EB Garamond and Nunito, both under the SIL Open Font License), header, theme toggle and popover. Dark is the default. The header carries Mock data, How it decides, Clear all and the theme toggle.
+- **The reference screen's lights**, redrawn for the bill's components and its status. An unlit light is a grey bulb. A lit one carries an icon as well as a colour: ✓ paid, ! paid with an alert, ✗ stopped or not paid, clock unpaid.
 - **Layouts.**
-  - Wide screens show one row: the phone, the path and the Bill panel.
-  - Below 900px the path runs full width under the phone and the bill.
-  - Below 640px everything stacks in the order the payment travels: phone, path, bill.
+  - The phone is centred and as tall as the window, up to 980px; it is half as wide as it is tall, and never narrower than 360px.
+  - Windows 880px tall and under use tighter rows, and those 740px tall and under use smaller bill rows and hide the path labels, so a whole bill fits on the phone without scrolling. A fit check confirms this at 15 window sizes from 1280×600 to 1920×1080, including laptop screens under browser toolbars (1366×657, 1280×632, 1536×730).
+  - At 520px wide and under the window is the phone: no frame, and the page scrolls instead.
 - **Accessibility.**
   - axe-core reports no violations in either theme, before a lookup, on the bill and after a stopped payment.
-  - A 59-step scripted walk covers the keyboard and every outcome. It looks up and pays with the keyboard only; checks validation, not found, Change bill, the third-payment rule and the balance; and runs Clear all mid-payment.
-  - Every outcome is also written out: Paid or Stopped on the phone, the path caption, the Bill panel's status, and a spoken paid or not paid on each component.
+  - A 59-step scripted walk covers the keyboard and every outcome. It looks up and pays with the keyboard only; checks that the phone is centred and fills the window; checks validation, not found, going back, the third-payment rule and the balance; and runs Clear all mid-payment.
+  - Every outcome is also written out: the bill's status, read aloud as it changes, and a spoken paid or not paid on each component.
 
 ## Decisions applied
 
 | Question | Applied | Status |
 |---|---|---|
-| What sits where the recipients were? | The Bill panel: the looked-up bill and its component accounts | Confirmed 2026-10-21 |
+| Where the bill shows | On the phone, with its component accounts, lights and status | Confirmed 2026-10-21 |
+| Phone size | Centred, and as tall as the window on laptops | Confirmed 2026-10-21 |
+| Where the message path goes | On the bill, under the status, from Pay onwards | Unconfirmed |
+| Page heading and intro | The heading is for screen readers only; How it decides moved into the header | Unconfirmed |
+| Phone-width windows | No frame; the app fills the window | Unconfirmed |
 | Keep a list of senders? | No; one fictional account holder on the phone | Confirmed 2026-10-21 |
 | Where the bill comes from | A local mock in the API's reply shape | Confirmed 2026-10-21 |
 | The reply for an unknown bill | `{"statusCode":1,"description":"BILL NOT FOUND"}`, invented; the real one has not been seen | Unconfirmed |

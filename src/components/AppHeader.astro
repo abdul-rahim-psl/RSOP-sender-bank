@@ -12,9 +12,13 @@ import ThemeToggle from './ThemeToggle.astro';
       <Icon name="flag" size={14} />
       <span>Mock data</span>
     </span>
-    <button class="btn clear" type="button" aria-label="Clear all" data-clear-all>
+    <button class="btn tool" type="button" aria-label="How it decides" popovertarget="how">
+      <Icon name="info" size={16} />
+      <span class="tool-word">How it decides</span>
+    </button>
+    <button class="btn tool" type="button" aria-label="Clear all" data-clear-all>
       <Icon name="retry" size={16} />
-      <span class="clear-word">Clear all</span>
+      <span class="tool-word">Clear all</span>
     </button>
     <ThemeToggle />
   </div>
@@ -57,7 +61,7 @@ import ThemeToggle from './ThemeToggle.astro';
     white-space: nowrap;
   }
 
-  .clear {
+  .tool {
     min-height: 36px;
     padding: 6px 14px;
   }
@@ -68,14 +72,14 @@ import ThemeToggle from './ThemeToggle.astro';
     }
   }
 
-  /* On the narrowest phones the button keeps its icon and its accessible name. */
-  @media (max-width: 400px) {
-    .clear {
+  /* On phones the buttons keep their icons and accessible names. */
+  @media (max-width: 640px) {
+    .tool {
       width: 36px;
       padding: 0;
     }
 
-    .clear-word {
+    .tool-word {
       display: none;
     }
   }

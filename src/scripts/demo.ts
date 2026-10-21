@@ -8,8 +8,8 @@ import { billInquiry, toBill, type Bill } from '../lib/biller';
 import { money } from '../lib/format';
 import { hash, screen, type Screening, type Tone } from '../lib/screen';
 
-type Mode = 'form' | 'busy' | 'bill' | 'done';
-type Outcome = 'open' | 'paying' | 'paid' | 'alert' | 'stopped';
+type Mode = 'form' | 'busy' | 'bill';
+type Stage = 'open' | 'paying' | 'paid' | 'alert' | 'stopped';
 
 const q = <T extends Element = HTMLElement>(sel: string, root: ParentNode = document) => root.querySelector<T>(sel)!;
 const qa = <T extends Element = HTMLElement>(sel: string, root: ParentNode = document) => [...root.querySelectorAll<T>(sel)];
@@ -22,16 +22,14 @@ const instInput = q<HTMLInputElement>('[data-institution]');
 const refInput = q<HTMLInputElement>('[data-bill-ref]');
 const hint = q('[data-w-hint]');
 const lookupBtn = q<HTMLButtonElement>('[data-lookup]');
+const billScr = q('[data-scr="bill"]');
+const lines = q('[data-b-lines]');
+const lineTpl = q<HTMLTemplateElement>('[data-b-line-tpl]');
+const status = q('[data-b-status]');
 const payBtn = q<HTMLButtonElement>('[data-pay]');
 const bHint = q('[data-b-hint]');
-const caption = q('[data-path-caption]');
 const dots = qa('[data-dot]');
 const gate = Number(q('[data-path]').dataset.gate);
-const panel = q('[data-bill-panel]');
-const panelLines = q('[data-bp-lines]');
-const panelLineTpl = q<HTMLTemplateElement>('[data-bp-line-tpl]');
-const phoneLines = q('[data-b-lines]');
-const phoneLineTpl = q<HTMLTemplateElement>('[data-b-line-tpl]');
 
 let balance = account.balance;
 let bill: Bill | null = null;
@@ -84,27 +82,40 @@ function tick() {
   q('[data-clock]').textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 }
 
-// ── Bill, on the phone and in the panel ───────────────────────────────
+// ── Bill screen ───────────────────────────────────────────────────────
 
-function fillLines<T extends HTMLElement>(list: HTMLElement, tpl: HTMLTemplateElement, b: Bill, each: (li: T, c: Bill['components'][number]) => void) {
-  list.replaceChildren(
+const STATUS: Record<Stage, { tone: Tone; line: Tone | null; word: string; title: string }> = {
+  open: { tone: 'wait', line: null, word: 'unpaid', title: 'Unpaid' },
+  paying: { tone: 'info', line: null, word: 'unpaid', title: 'Payment in screening' },
+  paid: { tone: 'ok', line: 'ok', word: 'paid', title: 'Paid' },
+  alert: { tone: 'warn', line: 'ok', word: 'paid', title: 'Paid, with an alert for review' },
+  stopped: { tone: 'fail', line: 'fail', word: 'not paid', title: 'Not paid: stopped at screening' },
+};
+
+/** Fills the bill and sets its stage; the stage drives the lights, the status and which button shows. */
+function renderBill(b: Bill, stage: Stage, sub = '') {
+  billScr.dataset.stage = stage;
+  q('[data-b-inst]').textContent = b.institution;
+  q('[data-b-ref]').textContent = b.billReference;
+  q('[data-b-id]').textContent = b.billId;
+  q('[data-b-total]').textContent = money(b.total, b.currency);
+  const s = STATUS[stage];
+  lines.replaceChildren(
     ...b.components.map((c) => {
-      const li = tpl.content.firstElementChild!.cloneNode(true) as T;
-      each(li, c);
+      const li = lineTpl.content.firstElementChild!.cloneNode(true) as HTMLElement;
+      setTone(li, s.line);
+      q('.bill-line-name', li).textContent = c.name;
+      q('.bill-line-acct', li).textContent = c.account;
+      q('.bill-line-amt', li).textContent = money(c.amount, b.currency);
+      q('.bill-line-word', li).textContent = s.word;
       return li;
     }),
   );
-}
+  setTone(status, s.tone);
+  status.dataset.tone = s.tone;
+  q('[data-b-status-title]').textContent = s.title;
+  q('[data-b-status-sub]').textContent = sub;
 
-function renderBillScreen(b: Bill) {
-  q('[data-b-id]').textContent = b.billId;
-  q('[data-b-total]').textContent = money(b.total, b.currency);
-  q('[data-b-inst]').textContent = b.institution;
-  q('[data-b-ref]').textContent = b.billReference;
-  fillLines(phoneLines, phoneLineTpl, b, (li, c) => {
-    q('.b-name', li).textContent = c.name;
-    q('.b-amt', li).textContent = money(c.amount, b.currency);
-  });
   q('[data-pay-label]').textContent = `Pay ${money(b.total, b.currency)}`;
   const short = b.total > balance;
   bHint.textContent = short ? 'That is more than your balance.' : `Splits across ${b.components.length} accounts at ${b.institution}.`;
@@ -112,38 +123,10 @@ function renderBillScreen(b: Bill) {
   payBtn.setAttribute('aria-disabled', String(short));
 }
 
-const STATUS: Record<Outcome, { tone: Tone; line: Tone | null; word: string; text: (b: Bill) => string }> = {
-  open: { tone: 'wait', line: null, word: 'unpaid', text: () => 'Unpaid' },
-  paying: { tone: 'info', line: null, word: 'unpaid', text: () => 'Payment in screening' },
-  paid: { tone: 'ok', line: 'ok', word: 'paid', text: (b) => `Paid: ${money(b.total, b.currency)} across ${b.components.length} accounts` },
-  alert: { tone: 'warn', line: 'ok', word: 'paid', text: () => 'Paid, with an alert for review' },
-  stopped: { tone: 'fail', line: 'fail', word: 'not paid', text: () => 'Not paid: stopped at screening' },
-};
-
-function renderPanel(b: Bill | null, outcome: Outcome = 'open') {
-  panel.dataset.state = b ? outcome : 'empty';
-  if (!b) return;
-  q('[data-bp-inst]').textContent = b.institution;
-  q('[data-bp-ref]').textContent = b.billReference;
-  q('[data-bp-id]').textContent = b.billId;
-  q('[data-bp-total]').textContent = money(b.total, b.currency);
-  const s = STATUS[outcome];
-  fillLines(panelLines, panelLineTpl, b, (li, c) => {
-    setTone(li, s.line);
-    q('.bill-line-name', li).textContent = c.name;
-    q('.bill-line-acct', li).textContent = c.account;
-    q('.bill-line-amt', li).textContent = money(c.amount, b.currency);
-    q('.bill-line-word', li).textContent = s.word;
-  });
-  setTone(q('[data-bp-status]'), s.tone);
-  q('[data-bp-status-text]').textContent = s.text(b);
-}
-
 // ── Path ──────────────────────────────────────────────────────────────
 
 function resetPath() {
   dots.forEach((d) => d.removeAttribute('data-tone'));
-  caption.textContent = 'Waiting for a payment';
 }
 
 async function replay(res: Screening, token: number) {
@@ -155,8 +138,7 @@ async function replay(res: Screening, token: number) {
     if (!(await alive(110))) return false;
   }
   dots[gate]!.dataset.tone = 'wait';
-  caption.textContent = 'Screening the payment';
-  q('[data-s-step]').textContent = 'Screening…';
+  q('[data-b-status-sub]').textContent = 'Screening the payment…';
 
   if (!(await alive(1400))) return false;
 
@@ -174,19 +156,13 @@ async function replay(res: Screening, token: number) {
 
 // ── Lookup and payment ────────────────────────────────────────────────
 
-function showBusy(title: string, text: string, step: string) {
-  q('[data-s-title]').textContent = title;
-  q('[data-s-text]').textContent = text;
-  q('[data-s-step]').textContent = step;
-  setMode('busy');
-}
-
 async function lookup() {
   const inst = instInput.value.trim();
   const ref = refInput.value.trim();
   const token = ++run;
   setBusy(true);
-  showBusy('Looking up', `Bill ${ref} at ${inst}`, 'Asking the biller');
+  q('[data-s-text]').textContent = `Bill ${ref} at ${inst}`;
+  setMode('busy');
 
   const [res] = await Promise.all([billInquiry({ institution: inst, billReference: ref }), sleep(700)]);
   if (token !== run) return;
@@ -203,8 +179,7 @@ async function lookup() {
   }
   bill = found;
   resetPath();
-  renderPanel(bill, 'open');
-  renderBillScreen(bill);
+  renderBill(bill, 'open');
   setMode('bill');
   payBtn.focus();
 }
@@ -218,31 +193,19 @@ async function pay() {
   const res = screen(rules, typologies, { id, amount: b.total, priorSends: sends++ });
 
   resetPath();
-  renderPanel(b, 'paying');
-  showBusy('Paying', `${money(b.total, b.currency)} to ${b.institution}`, 'On its way');
-  caption.textContent = `Paying ${money(b.total, b.currency)} to ${b.institution}`;
+  renderBill(b, 'paying', `${money(b.total, b.currency)} on its way to ${b.institution}`);
 
   if (!(await replay(res, token))) return;
 
   const alert = res.adjudicator === 'ALRT';
   if (res.delivered) balance = Math.round((balance - b.total) * 100) / 100;
-  renderPanel(b, !res.delivered ? 'stopped' : alert ? 'alert' : 'paid');
-  caption.textContent = res.delivered
-    ? `Paid to ${b.institution}${alert ? ', with an alert for review' : ''}`
-    : `Stopped at screening: ${b.institution} received nothing`;
-
-  setTone(q('[data-d-light]'), !res.delivered ? 'fail' : alert ? 'warn' : 'ok');
-  q('[data-d-title]').textContent = res.delivered ? 'Paid' : 'Stopped';
-  q('[data-d-text]').textContent = res.delivered
-    ? `Bill ${b.billReference} is paid.${alert ? ' An alert was raised for review.' : ''}`
-    : 'This payment was stopped for review. Your balance is unchanged.';
-  q('[data-d-inst]').textContent = b.institution;
-  q('[data-d-bill]').textContent = b.billReference;
-  q('[data-d-amount]').textContent = money(b.total, b.currency);
-  q('[data-d-ref]').textContent = id;
+  renderBill(
+    b,
+    !res.delivered ? 'stopped' : alert ? 'alert' : 'paid',
+    res.delivered ? `Ref ${id}` : `Ref ${id} · balance unchanged`,
+  );
 
   setBusy(false);
-  setMode('done');
   renderForm();
   q<HTMLButtonElement>('[data-new-payment]').focus();
 }
@@ -283,13 +246,14 @@ payBtn.addEventListener('click', () => {
 });
 
 q('[data-back]').addEventListener('click', () => {
+  if (busy) return;
   bill = null;
-  renderPanel(null);
   setMode('form');
   refInput.focus();
 });
 
 q('[data-new-payment]').addEventListener('click', () => {
+  bill = null;
   instInput.value = '';
   refInput.value = '';
   setMode('form');
@@ -305,7 +269,6 @@ q('[data-clear-all]').addEventListener('click', () => {
   sends = 0;
   instInput.value = '';
   refInput.value = '';
-  renderPanel(null);
   resetPath();
   setMode('form');
   renderForm();

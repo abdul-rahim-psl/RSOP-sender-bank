@@ -1,4 +1,4 @@
-/* The sender demo: phone | path | bill. The phone looks a bill up and pays it; the path shows it screened on the way. */
+/* The sender demo: one phone, centred and as tall as the window. It looks a bill up, pays it and shows it screened on the way. */
 
 :root {
   --screen: #11141f;
@@ -52,42 +52,11 @@
 /* ── Page ─────────────────────────────────────────────────────────── */
 
 .demo {
-  width: min(100% - 2 * var(--gutter), 1280px);
-  margin-inline: auto;
-  padding: 22px 0 36px;
-}
-
-.intro {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px 24px;
-  margin-bottom: 18px;
-}
-
-.intro .title {
-  font-size: clamp(1.7rem, 2.6vw, 2.2rem);
-}
-
-.intro p {
-  margin-top: 6px;
-  color: var(--mut);
-  font-size: 0.9rem;
-}
-
-.panel-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 0 2px 12px;
-}
-
-.panel-head h2 {
-  font-size: 1rem;
-  font-weight: 900;
-  letter-spacing: 0.005em;
+  --page-pad: 16px;
+  display: grid;
+  place-items: center;
+  min-height: calc(100dvh - var(--header-h));
+  padding: var(--page-pad) var(--gutter);
 }
 
 .iso {
@@ -149,28 +118,6 @@
   animation: glow 0.8s ease-in-out infinite alternate;
 }
 
-/* ── Stage ────────────────────────────────────────────────────────── */
-
-.stage {
-  display: grid;
-  grid-template-columns: auto minmax(150px, 1fr) minmax(300px, 380px);
-  grid-template-areas: 'phone path bill';
-  align-items: start;
-  gap: 18px;
-}
-
-.phone-wrap {
-  grid-area: phone;
-}
-
-.path {
-  grid-area: path;
-}
-
-.bill {
-  grid-area: bill;
-}
-
 .avatar {
   display: grid;
   place-items: center;
@@ -186,27 +133,15 @@
   letter-spacing: 0.04em;
 }
 
-.empty-icon {
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-  border: 1px dashed var(--stroke-strong);
-  border-radius: 50%;
-  color: var(--mut);
-}
-
 /* ── Phone ────────────────────────────────────────────────────────── */
 
-.phone-wrap {
-  display: grid;
-  justify-items: center;
-}
-
+/* As tall as the window allows on a laptop. Half as wide as tall, but never under 360px, so bill rows don't wrap on short screens. */
 .phone {
+  --ph: clamp(560px, 100dvh - var(--header-h) - 2 * var(--page-pad), 980px);
+  --h: min(var(--ph), (100vw - 2 * var(--gutter)) * 2);
   position: relative;
-  width: 296px;
-  height: 584px;
+  width: min(max(var(--h) / 2, 360px), 100vw - 2 * var(--gutter));
+  height: var(--h);
   padding: 10px;
   border-radius: 48px;
   background: var(--frame);
@@ -224,19 +159,19 @@
 }
 
 .hw-vol-up {
-  top: 118px;
+  top: 19%;
   left: -4px;
   height: 46px;
 }
 
 .hw-vol-down {
-  top: 174px;
+  top: 28%;
   left: -4px;
   height: 46px;
 }
 
 .hw-power {
-  top: 150px;
+  top: 24%;
   right: -4px;
   height: 74px;
 }
@@ -280,24 +215,25 @@
   height: 12px;
 }
 
+/* A screen scrolls inside the phone only when the window is too short to show it all. */
 .scr {
   display: none;
   flex: 1;
   flex-direction: column;
   gap: 12px;
   min-height: 0;
-  padding: 8px 16px 18px;
+  padding: 8px 18px 20px;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .screen[data-screen='form'] .scr-form,
 .screen[data-screen='busy'] .scr-busy,
-.screen[data-screen='bill'] .scr-bill,
-.screen[data-screen='done'] .scr-done {
+.screen[data-screen='bill'] .scr-bill {
   display: flex;
 }
 
-.scr-busy,
-.scr-done {
+.scr-busy {
   align-items: center;
   justify-content: center;
   text-align: center;
@@ -311,8 +247,7 @@
   line-height: 1.1;
 }
 
-.s-text,
-.d-text {
+.s-text {
   max-width: 24ch;
   color: var(--mut);
   font-size: 0.86rem;
@@ -463,20 +398,31 @@
   color: var(--fail-ink);
 }
 
-/* The bill screen: back link, the total, then one line per component. */
-.w-back {
-  display: inline-flex;
+/* The bill screen keeps one layout through the payment; its stage decides what shows. */
+.scr-bill {
+  gap: 10px;
+}
+
+.b-top {
+  display: flex;
   align-items: center;
-  align-self: flex-start;
-  gap: 4px;
-  margin-left: -4px;
-  padding: 4px 6px;
+  gap: 6px;
+}
+
+.b-top .iso {
+  margin-left: auto;
+}
+
+.w-back {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-left: -6px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   color: var(--ink-2);
-  font-size: 0.8rem;
-  font-weight: 800;
   cursor: pointer;
 }
 
@@ -484,46 +430,15 @@
   background: var(--hover);
 }
 
-.b-head {
-  display: grid;
-  gap: 2px;
+.scr-bill:not([data-stage='open']) .w-back {
+  visibility: hidden;
 }
 
-.b-total {
-  font-size: 1.6rem;
-  font-weight: 900;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-}
-
-.b-meta {
-  color: var(--mut);
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.b-lines {
-  display: grid;
-  border-top: 1px solid var(--stroke);
-}
-
-.b-line {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 2px;
-  border-bottom: 1px solid var(--stroke);
-  font-size: 0.8rem;
-}
-
-.b-name {
-  color: var(--ink-2);
-  font-weight: 700;
-}
-
-.b-amt {
-  font-weight: 800;
-  white-space: nowrap;
+.scr-bill[data-stage='open'] .path,
+.scr-bill:not([data-stage='open']) .w-hint,
+.scr-bill:not([data-stage='open']) .b-pay,
+.scr-bill:is([data-stage='open'], [data-stage='paying']) .b-again {
+  display: none;
 }
 
 .send {
@@ -584,53 +499,12 @@
   font-size: 0.8rem;
 }
 
-.scr-done {
-  gap: 10px;
-}
-
-.d-title {
-  font-family: var(--font-serif);
-  font-size: 2rem;
-  font-weight: 500;
-  line-height: 1.1;
-}
-
-.d-receipt {
-  display: grid;
-  width: 100%;
-  margin-top: 6px;
-  border-top: 1px solid var(--stroke);
-  text-align: left;
-}
-
-.d-receipt div {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 2px;
-  border-bottom: 1px solid var(--stroke);
-  font-size: 0.8rem;
-}
-
-.d-receipt dt {
-  color: var(--mut);
-  font-weight: 700;
-}
-
-.d-receipt dd {
-  overflow: hidden;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* ── Path ─────────────────────────────────────────────────────────── */
 
 .path {
   display: grid;
-  gap: 12px;
-  align-self: center;
-  padding: 0 4px;
+  gap: 8px;
+  padding: 4px 2px 0;
 }
 
 .dots {
@@ -640,8 +514,8 @@
 }
 
 .dot {
-  width: 15px;
-  height: 15px;
+  width: 12px;
+  height: 12px;
   border: 1px solid var(--stroke-strong);
   border-radius: 50%;
   background: radial-gradient(circle at 34% 30%, var(--bulb-hi), var(--bulb-lo));
@@ -655,8 +529,8 @@
 .dot.gate {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
 }
 
 .dot[data-tone] {
@@ -676,50 +550,16 @@
   display: flex;
   justify-content: space-between;
   color: var(--faint);
-  font-size: 0.64rem;
+  font-size: 0.6rem;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
-.path-caption {
-  min-height: 2.8em;
-  color: var(--ink-2);
-  font-size: 0.84rem;
-  font-weight: 700;
-  text-align: center;
-}
-
-/* ── Bill panel ───────────────────────────────────────────────────── */
-
-.bill {
-  padding: 16px 16px 14px;
-}
-
-.bill-empty {
-  display: grid;
-  justify-items: center;
-  gap: 12px;
-  padding: 28px 8px 22px;
-  color: var(--mut);
-  font-size: 0.84rem;
-  font-weight: 700;
-  text-align: center;
-}
-
-.bill-body {
-  display: grid;
-  gap: 10px;
-}
-
-.bill[data-state='empty'] .bill-body,
-.bill:not([data-state='empty']) .bill-empty {
-  display: none;
-}
+/* ── Bill, on the phone ──────────────────────────────────────────── */
 
 .bill-meta {
   display: grid;
-  margin-bottom: 4px;
   border-top: 1px solid var(--stroke);
 }
 
@@ -793,13 +633,29 @@
 .bill-status {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 9px 12px;
   border: 1px solid color-mix(in srgb, var(--tone, var(--stroke)) 45%, transparent);
   border-radius: 12px;
   background: color-mix(in srgb, var(--tone, transparent) 10%, transparent);
   font-size: 0.82rem;
   font-weight: 800;
+}
+
+.bill-status-text {
+  display: grid;
+  min-width: 0;
+}
+
+.bill-status-text span {
+  color: var(--mut);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.bill-status-text span:empty {
+  display: none;
 }
 
 /* ── How it decides ───────────────────────────────────────────────── */
@@ -856,37 +712,129 @@
 
 /* ── Smaller screens ──────────────────────────────────────────────── */
 
-/* The path drops under the phone and the bill and runs their full width, like a progress bar. */
-@media (max-width: 899px) {
-  .stage {
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas:
-      'phone bill'
-      'path path';
+/* Short laptop windows: tighter rows, so a whole bill still fits on the phone without scrolling. */
+@media (max-height: 880px) and (min-width: 521px) {
+  .scr {
+    gap: 9px;
+    padding: 2px 16px 14px;
   }
 
-  .path {
-    padding: 4px 8px 0;
+  .scr-bill {
+    gap: 7px;
+  }
+
+  .bill-meta div {
+    padding: 5px 2px;
+  }
+
+  .bill-lines {
+    gap: 5px;
+  }
+
+  .bill-line {
+    padding: 5px 10px;
+  }
+
+  .bill-total {
+    padding-top: 4px;
+  }
+
+  .bill-status {
+    padding: 6px 12px;
   }
 }
 
-/* One column, in the order the payment travels: the phone, the path, the biller. */
-@media (max-width: 639px) {
-  .stage {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      'phone'
-      'path'
-      'bill';
+/* Very short windows, such as a 768px laptop screen under browser toolbars: smaller bill rows, no path labels. */
+@media (max-height: 740px) and (min-width: 521px) {
+  .demo {
+    --page-pad: 8px;
   }
 
-  .intro .btn {
-    align-self: flex-start;
+  .sbar {
+    height: 34px;
+  }
+
+  .scr,
+  .scr-bill {
+    gap: 6px;
+    padding-bottom: 10px;
+  }
+
+  .bill-meta div {
+    padding: 3px 2px;
+  }
+
+  .bill-line-text {
+    line-height: 1.2;
+  }
+
+  .bill-line-name {
+    font-size: 0.8rem;
+  }
+
+  .bill-line-acct {
+    font-size: 0.66rem;
+  }
+
+  .path-labels {
+    display: none;
+  }
+
+  .bill-line {
+    padding: 4px 10px;
+  }
+
+  .bill-total {
+    padding-top: 2px;
+  }
+
+  .bill-status {
+    padding: 5px 12px;
+  }
+
+  .w-back {
+    height: 28px;
+  }
+
+  .dot.gate {
+    width: 24px;
+    height: 24px;
+  }
+
+  .send {
+    min-height: 42px;
   }
 }
 
-@media (max-width: 360px) {
+/* On a phone-sized window the window is the phone: no frame, and the page scrolls instead of the screen. */
+@media (max-width: 520px) {
+  .demo {
+    display: block;
+    padding: 0;
+  }
+
   .phone {
-    width: 288px;
+    width: 100%;
+    height: auto;
+    min-height: calc(100dvh - var(--header-h));
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .hw,
+  .sbar {
+    display: none;
+  }
+
+  .screen {
+    min-height: calc(100dvh - var(--header-h));
+    border-radius: 0;
+  }
+
+  .scr {
+    overflow: visible;
+    padding-top: 16px;
   }
 }

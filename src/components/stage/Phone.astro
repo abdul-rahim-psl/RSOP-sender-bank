@@ -1,0 +1,113 @@
+---
+import Icon from '../Icon.astro';
+import Light from '../Light.astro';
+import { CURRENCY, quickAmounts } from '../../data/parties';
+
+const fmt0 = new Intl.NumberFormat('en-US');
+---
+
+<div class="phone-wrap">
+  <div class="phone" role="group" aria-label="Sender's phone">
+    <span class="hw hw-vol-up" aria-hidden="true"></span>
+    <span class="hw hw-vol-down" aria-hidden="true"></span>
+    <span class="hw hw-power" aria-hidden="true"></span>
+
+    <div class="screen" data-screen="empty">
+      <div class="sbar" aria-hidden="true">
+        <span class="sbar-time" data-clock>09:41</span>
+        <span class="island"></span>
+        <svg class="sbar-icons" viewBox="0 0 40 12">
+          <path d="M1 10h2.2V8H1zM5 10h2.2V6H5zM9 10h2.2V4H9zM13 10h2.2V2H13z" fill="currentColor" />
+          <rect x="21.5" y="1.5" width="15" height="9" rx="2.4" fill="none" stroke="currentColor" stroke-opacity=".5" />
+          <rect x="23" y="3" width="10" height="6" rx="1.2" fill="currentColor" />
+          <path d="M38.2 4.6v2.8" stroke="currentColor" stroke-opacity=".5" stroke-width="1.4" stroke-linecap="round" />
+        </svg>
+      </div>
+
+      <div class="scr scr-empty" data-scr="empty">
+        <span class="empty-icon"><Icon name="phone" size={26} /></span>
+        <p class="empty-title">No sender yet</p>
+        <p class="empty-text">Pick a sender to open their wallet.</p>
+        <noscript><p class="empty-text">This demo needs JavaScript.</p></noscript>
+      </div>
+
+      <form class="scr scr-form" data-scr="form" data-send-form novalidate>
+        <div class="w-head">
+          <span class="avatar" aria-hidden="true" data-w-initials></span>
+          <div>
+            <p class="w-hi">Hi, <span data-w-first></span></p>
+            <p class="w-prov" data-w-provider></p>
+          </div>
+        </div>
+
+        <div class="w-bal">
+          <p class="w-bal-label">Balance</p>
+          <p class="w-bal-value" data-w-balance></p>
+          <p class="w-bal-phone" data-w-phone></p>
+        </div>
+
+        <div class="w-to">
+          <p class="w-label">To</p>
+          <p class="w-to-party" data-w-to>
+            <span class="avatar sm" aria-hidden="true" data-w-to-initials></span>
+            <span class="w-to-text">
+              <span class="w-to-name" data-w-to-name></span>
+              <span class="w-to-meta" data-w-to-meta></span>
+            </span>
+          </p>
+        </div>
+
+        <label class="w-amount">
+          <span class="w-label">Amount</span>
+          <span class="w-amount-box">
+            <span class="w-cur" aria-hidden="true">{CURRENCY}</span>
+            <input
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              placeholder="0.00"
+              aria-describedby="w-hint"
+              data-amount
+            />
+          </span>
+        </label>
+
+        <div class="w-quick" role="group" aria-label="Quick amounts">
+          {
+            quickAmounts.map((a) => (
+              <button class="w-chip" type="button" aria-pressed="false" data-quick={a}>
+                {fmt0.format(a)}
+              </button>
+            ))
+          }
+        </div>
+
+        <p class="w-hint" id="w-hint" data-w-hint></p>
+
+        <button class="send" type="submit" aria-describedby="w-hint" data-send>
+          <Icon name="send" size={17} />
+          Send
+        </button>
+      </form>
+
+      <div class="scr scr-sending" data-scr="sending">
+        <span class="spinner" aria-hidden="true"></span>
+        <p class="s-title">Sending</p>
+        <p class="s-text" data-s-text></p>
+        <p class="s-step" data-s-step></p>
+      </div>
+
+      <div class="scr scr-done" data-scr="done">
+        <Light size="lg" data-d-light />
+        <p class="d-title" data-d-title></p>
+        <p class="d-text" data-d-text></p>
+        <dl class="d-receipt">
+          <div><dt>To</dt><dd data-d-to></dd></div>
+          <div><dt>Amount</dt><dd data-d-amount></dd></div>
+          <div><dt>Reference</dt><dd class="mono" data-d-ref></dd></div>
+        </dl>
+        <button class="send ghost" type="button" data-new-payment>New payment</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,82 @@
+---
+import Brand from './Brand.astro';
+import Icon from './Icon.astro';
+import ThemeToggle from './ThemeToggle.astro';
+---
+
+<header class="app-header">
+  <Brand />
+
+  <div class="tools">
+    <span class="mock" title="Nothing on this screen is connected to a live system">
+      <Icon name="flag" size={14} />
+      <span>Mock data</span>
+    </span>
+    <button class="btn clear" type="button" aria-label="Clear all" data-clear-all>
+      <Icon name="retry" size={16} />
+      <span class="clear-word">Clear all</span>
+    </button>
+    <ThemeToggle />
+  </div>
+</header>
+
+<style>
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    height: var(--header-h);
+    padding: 0 var(--gutter);
+    background: color-mix(in srgb, var(--bg) 84%, transparent);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--stroke);
+  }
+
+  .tools {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+  }
+
+  .mock {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 11px;
+    border: 1px dashed color-mix(in srgb, var(--wait) 60%, transparent);
+    border-radius: 999px;
+    color: var(--wait-ink);
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .clear {
+    min-height: 36px;
+    padding: 6px 14px;
+  }
+
+  @media (max-width: 560px) {
+    .mock {
+      display: none;
+    }
+  }
+
+  /* On the narrowest phones the button keeps its icon and its accessible name. */
+  @media (max-width: 400px) {
+    .clear {
+      width: 36px;
+      padding: 0;
+    }
+
+    .clear-word {
+      display: none;
+    }
+  }
+</style>

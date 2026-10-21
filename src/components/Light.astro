@@ -1,0 +1,23 @@
+---
+import type { Tone } from '../lib/screen';
+
+interface Props {
+  tone?: Tone;
+  size?: 'sm' | 'md' | 'lg';
+  class?: string;
+  [data: `data-${string}`]: string | undefined;
+}
+
+const { tone, size = 'sm', class: cls, ...rest } = Astro.props;
+---
+
+{/* Every tone's glyph is drawn; CSS shows the one matching data-tone, so the script only flips one attribute. */}
+<span class:list={['light', size, cls]} data-tone={tone} aria-hidden="true" {...rest}>
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path class="g-ok" d="m4 8.4 2.6 2.5L12 5.3" />
+    <path class="g-fail" d="M5 5l6 6M11 5l-6 6" />
+    <path class="g-warn" d="M8 4.3v4.5M8 11.7v.1" />
+    <g class="g-wait" stroke-width="1.6"><circle cx="8" cy="8" r="4.9" /><path d="M8 5.7V8l1.6 1.1" /></g>
+    <circle class="g-info" cx="8" cy="8" r="2.2" fill="currentColor" stroke="none" />
+  </svg>
+</span>

@@ -1,0 +1,44 @@
+---
+import Light from '../Light.astro';
+import type { Tone } from '../../lib/screen';
+
+interface Props {
+  kind: 'rule' | 'typology';
+  title: string;
+  ids: string[];
+  legend: { tone: Tone; word: string }[];
+}
+
+const { kind, title, ids, legend } = Astro.props;
+const noun = kind === 'rule' ? 'rules' : 'typologies';
+---
+
+<section class="mon glass grid-panel" aria-labelledby={`h-${kind}`} data-grid={kind}>
+  <header class="panel-head">
+    <h2 id={`h-${kind}`}>{title}</h2>
+    <p class="panel-sum" data-sum>{ids.length} {noun}</p>
+  </header>
+  <ul class="lights">
+    {
+      ids.map((id) => (
+        <li class="lt" data-lt={id}>
+          <Light />
+          <span class="lt-id">{id}</span>
+          <span class="sr-only" data-lt-word>
+            not run
+          </span>
+        </li>
+      ))
+    }
+  </ul>
+  <ul class="legend" aria-label={`${title} key`}>
+    {
+      legend.map((l) => (
+        <li>
+          <Light tone={l.tone} />
+          {l.word}
+        </li>
+      ))
+    }
+  </ul>
+</section>

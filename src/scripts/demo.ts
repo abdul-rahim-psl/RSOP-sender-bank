@@ -3,8 +3,8 @@
 
 import { rules, typologies } from '../data/network';
 import { account } from '../data/account';
-import { SAMPLE_INSTITUTION } from '../data/bills';
-import { billInquiry, toBill, type Bill } from '../lib/biller';
+import { institutions } from '../data/bills';
+import { billInquiry, billRefProblem, toBill, type Bill } from '../lib/biller';
 import { money } from '../lib/format';
 import { hash, screen, type Screening, type Tone } from '../lib/screen';
 
@@ -18,7 +18,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const demo = q('[data-demo]');
 const screenEl = q('[data-screen]');
 const form = q<HTMLFormElement>('[data-inquiry-form]');
-const instInput = q<HTMLInputElement>('[data-institution]');
+const instInput = q<HTMLSelectElement>('[data-institution]');
 const refInput = q<HTMLInputElement>('[data-bill-ref]');
 const hint = q('[data-w-hint]');
 const lookupBtn = q<HTMLButtonElement>('[data-lookup]');
@@ -61,15 +61,16 @@ function setBusy(on: boolean) {
 function check(): { ok: boolean; text: string; focus?: HTMLElement } {
   const inst = instInput.value.trim();
   const ref = refInput.value.trim();
-  if (!inst) return { ok: false, text: 'Enter the institution.', focus: instInput };
-  if (!ref) return { ok: false, text: 'Enter the bill reference.', focus: refInput };
+  if (!inst) return { ok: false, text: 'Choose the institution.', focus: instInput };
+  const problem = billRefProblem(ref);
+  if (problem) return { ok: false, text: problem, focus: refInput };
   return { ok: true, text: `Look up bill ${ref} at ${inst}.` };
 }
 
 function renderForm() {
   q('[data-w-balance]').textContent = money(balance);
   for (const chip of qa('[data-sample]'))
-    chip.setAttribute('aria-pressed', String(instInput.value.trim() === SAMPLE_INSTITUTION && refInput.value.trim() === chip.dataset.sample));
+    chip.setAttribute('aria-pressed', String(refInput.value.trim() === chip.dataset.sample));
   const c = check();
   hint.textContent = c.text;
   hint.dataset.ok = String(c.ok);
@@ -212,11 +213,12 @@ async function pay() {
 
 // ── Wiring ────────────────────────────────────────────────────────────
 
-for (const input of [instInput, refInput]) input.addEventListener('input', renderForm);
+instInput.addEventListener('change', renderForm);
+refInput.addEventListener('input', renderForm);
 
 for (const chip of qa<HTMLButtonElement>('[data-sample]')) {
   chip.addEventListener('click', () => {
-    instInput.value = SAMPLE_INSTITUTION;
+    instInput.value = institutions[0]!;
     refInput.value = chip.dataset.sample!;
     renderForm();
   });
@@ -254,11 +256,11 @@ q('[data-back]').addEventListener('click', () => {
 
 q('[data-new-payment]').addEventListener('click', () => {
   bill = null;
-  instInput.value = '';
+  instInput.selectedIndex = 0;
   refInput.value = '';
   setMode('form');
   renderForm();
-  instInput.focus();
+  refInput.focus();
 });
 
 q('[data-clear-all]').addEventListener('click', () => {
@@ -267,7 +269,7 @@ q('[data-clear-all]').addEventListener('click', () => {
   balance = account.balance;
   bill = null;
   sends = 0;
-  instInput.value = '';
+  instInput.selectedIndex = 0;
   refInput.value = '';
   resetPath();
   setMode('form');

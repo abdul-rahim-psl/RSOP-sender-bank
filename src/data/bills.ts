@@ -1,5 +1,5 @@
-// Mock biller answers in the exact shape of RSOP's POST /api/v1/billInquiry. Bill 123 is the API's own reply;
-// 456 and 789 are invented with the same component split, so the three bills land in the three screening bands.
+// Mock biller answers in the exact shape of RSOP's POST /api/v1/billInquiry. The live API returns one bill,
+// PKR 100,000 echoing the reference, for any reference; 4567890123 and 7890123456 are invented to reach the other outcomes.
 
 export interface BillInquiryRequest {
   institution: string;
@@ -21,6 +21,12 @@ export interface BillInquiryResponse {
   currency?: string;
   billInquiryAccounts?: BillInquiryAccount[];
 }
+
+/** The institutions the phone offers. */
+export const institutions = ['FBR'];
+
+/** A bill reference is exactly this many letters or digits. */
+export const BILL_REF_LENGTH = 10;
 
 const accounts = (amounts: number[]): BillInquiryAccount[] =>
   [
@@ -44,14 +50,11 @@ const bill = (billId: string, billReference: string, amounts: number[]): BillInq
   billInquiryAccounts: accounts(amounts),
 });
 
+/** What the live API answers for any reference: the same bill, with the reference echoed back. */
+export const standardBill = (billReference: string) => bill('12345', billReference, [40_000, 35_000, 20_000, 5_000]);
+
 export const sampleBills: Record<string, BillInquiryResponse> = {
-  '123': bill('12345', '123', [40_000, 35_000, 20_000, 5_000]),
-  '456': bill('12346', '456', [180_000, 157_500, 90_000, 22_500]),
-  '789': bill('12347', '789', [500_000, 437_500, 250_000, 62_500]),
+  '1234567890': standardBill('1234567890'),
+  '4567890123': bill('12346', '4567890123', [180_000, 157_500, 90_000, 22_500]),
+  '7890123456': bill('12347', '7890123456', [500_000, 437_500, 250_000, 62_500]),
 };
-
-/** Invented: the real API's reply for an unknown bill has not been seen yet. */
-export const notFound: BillInquiryResponse = { statusCode: 1, description: 'BILL NOT FOUND' };
-
-/** The institution the API sample was called with; the demo-bill chips fill it in. */
-export const SAMPLE_INSTITUTION = 'abc';

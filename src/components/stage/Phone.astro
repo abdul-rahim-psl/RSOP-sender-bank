@@ -3,7 +3,7 @@ import Icon from '../Icon.astro';
 import Light from '../Light.astro';
 import Path from './Path.astro';
 import { account, initials } from '../../data/account';
-import { SAMPLE_INSTITUTION, sampleBills } from '../../data/bills';
+import { BILL_REF_LENGTH, institutions, sampleBills } from '../../data/bills';
 ---
 
 <div class="phone" role="group" aria-label="Sender's phone">
@@ -42,12 +42,27 @@ import { SAMPLE_INSTITUTION, sampleBills } from '../../data/bills';
 
       <label class="w-field">
         <span class="w-label">Institution</span>
-        <input type="text" autocomplete="off" spellcheck="false" aria-describedby="w-hint" data-institution />
+        <span class="w-select">
+          <select data-institution>
+            {institutions.map((i) => <option value={i}>{i}</option>)}
+          </select>
+          <Icon name="chevron" size={18} />
+        </span>
       </label>
 
       <label class="w-field">
         <span class="w-label">Bill reference</span>
-        <input type="text" autocomplete="off" spellcheck="false" aria-describedby="w-hint" data-bill-ref />
+        <input
+          type="text"
+          inputmode="text"
+          maxlength={BILL_REF_LENGTH}
+          pattern={`[A-Za-z0-9]{${BILL_REF_LENGTH}}`}
+          placeholder={`${BILL_REF_LENGTH} letters or digits`}
+          autocomplete="off"
+          spellcheck="false"
+          aria-describedby="w-hint"
+          data-bill-ref
+        />
       </label>
 
       <div class="w-quick" role="group" aria-label="Demo bills">
@@ -58,7 +73,7 @@ import { SAMPLE_INSTITUTION, sampleBills } from '../../data/bills';
               class="w-chip"
               type="button"
               aria-pressed="false"
-              aria-label={`Demo bill ${ref} at ${SAMPLE_INSTITUTION}`}
+              aria-label={`Demo bill ${ref} at ${institutions[0]}`}
               data-sample={ref}
             >
               {ref}

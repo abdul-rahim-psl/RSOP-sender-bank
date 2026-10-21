@@ -17,7 +17,7 @@
 
 ## Goal
 
-A one-screen, clickable demo of a sender-initiated bill payment. The phone is the whole page, centred and as tall as the window. On it, the account holder enters an institution and a bill reference, looks the bill up and pays it. The bill shows its component accounts; while paying, a message path shows the payment pass through screening before it reaches the biller, and each account then shows paid or not paid. It runs on mock data only and connects to nothing.
+A one-screen, clickable demo of a sender-initiated bill payment. The phone is the whole page, centred and as tall as the window. On it, the account holder picks the institution (FBR), enters a 10-character bill reference, looks the bill up and pays it. The bill shows its component accounts; while paying, a message path shows the payment pass through screening before it reaches the biller, and each account then shows paid or not paid. It runs on mock data only and connects to nothing.
 
 ## Source and content rules
 
@@ -28,26 +28,28 @@ A one-screen, clickable demo of a sender-initiated bill payment. The phone is th
 | `RSOP demo 2/` | Development rules, stack, tokens, fonts, theme toggle, header, popover and status conventions |
 
 1. **The API is the authority for the bill.** Its two inputs are the phone's only inputs. Its reply fields and their order are what the phone shows.
-2. **No product branding.** No logo, product name, version, tenant or account address from the reference screen. Participant codes from the API's headers are not shown.
-3. **Fictional data only.** The account holder is invented. Phone numbers use the 555-01xx range set aside for fiction.
-4. **Mock outcomes are labelled as mock.** The screening outcomes come from invented rules of thumb, not from real rule or typology logic. The header's Mock data label and How it decides say so.
+2. **The phone's input rules.** Institution is a dropdown with one value, FBR. A bill reference is exactly 10 letters or digits; Look up stays disabled until it is. The API itself enforces neither rule; see [The API](#the-api).
+3. **No product branding.** No logo, product name, version, tenant or account address from the reference screen. Participant codes from the API's headers are not shown.
+4. **Fictional data only.** The account holder is invented. Phone numbers use the 555-01xx range set aside for fiction.
+5. **Mock outcomes are labelled as mock.** The screening outcomes come from invented rules of thumb, not from real rule or typology logic. The header's Mock data label and How it decides say so.
 
 ## Bill inquiry
 
 ### The API
 
-Captured with curl on 2026-10-21 against `http://10.0.70.144:9991`:
+Captured with curl on 2026-10-21 against `http://192.168.9.15:9991`:
 
 ```http
 POST /api/v1/billInquiry
 Content-Type: application/json
+Charset: UTF-8
 Sender-Participant-Code, Receiver-Participant-Code, Sender-User-Code, X-Request-ID
 
-{ "institution": "abc", "billReference": "123" }
+{ "institution": "FBR", "billReference": "1234567890" }
 ```
 
 ```json
-{"statusCode":0,"description":"SUCCESS","billId":"12345","billReference":"123","total":"100000","currency":"PKR",
+{"statusCode":0,"description":"SUCCESS","billId":"12345","billReference":"1234567890","total":"100000","currency":"PKR",
  "billInquiryAccounts":[
   {"componentName":"Custom duty","componentAccount":"1111111111","componentAmount":"40000"},
   {"componentName":"Sales tax","componentAccount":"2222222222","componentAmount":"35000"},
@@ -55,9 +57,16 @@ Sender-Participant-Code, Receiver-Participant-Code, Sender-User-Code, X-Request-
   {"componentName":"Other levy","componentAccount":"4444444444","componentAmount":"5000"}]}
 ```
 
+All of the following were checked live on 2026-10-21 at about 23:25 PKT:
+
+- **The `Charset: UTF-8` header is required.** Without it the API answers `400 Bad Request` with an empty message, whatever the body.
+- **It returns the same bill for any input.** Bill ID 12345, PKR 100,000, the same four components, with the bill reference echoed back. With the header, it accepted institution `abc` as well as `FBR`, and the 3-character reference `123` as well as `1234567890` and `AB12CD34EF`. So the FBR and 10-character rules are the phone's alone. References over 10 characters or with symbols were only sent without the header, and the API stopped answering this laptop at about 23:30 PKT before they could be retried.
 - Amounts are strings in whole rupees, and the components add up to the total.
-- The reply does not echo the institution, so the phone keeps the one the person typed.
-- The page cannot call the API from the browser. RSOP's flow endpoints on the same server send no CORS headers, and the address is private, so tunnel viewers cannot reach it. Both were verified on 2026-10-21; this endpoint is assumed to behave the same. On the evening of 2026-10-21 it did not answer from this laptop at all.
+- The reply does not echo the institution, so the phone keeps the one the person picked.
+- **The browser cannot call it: CORS still blocks.**
+  - The `OPTIONS` preflight returns `403` with no `Access-Control-Allow-Origin` for every origin tried: `http://127.0.0.1:4393`, `localhost` on ports 3000, 4321, 4393, 5173 and 8080, `null` and the tunnel's address. Only the API's own origin, `http://192.168.9.15:9991`, passes.
+  - From the demo at `http://127.0.0.1:4393`, Chrome reports: "blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present".
+  - From the tunnel's `https` address, Chrome refuses earlier, before CORS: a public page may not call a private address ("Permission was denied for this request to access the `unknown` address space"). Allowing CORS on the API would not fix this case; only a proxy on the demo's own origin would.
 
 ### The mock
 
@@ -65,12 +74,12 @@ Sender-Participant-Code, Receiver-Participant-Code, Sender-User-Code, X-Request-
 
 | Bill reference | Total | Source | Outcome |
 |---|---|---|---|
-| 123 | PKR 100,000 | The API's reply, unchanged | No alert |
-| 456 | PKR 450,000 | Invented, same 40/35/20/5 split and accounts | Alert, still paid |
-| 789 | PKR 1,250,000 | Invented, same split and accounts | Stopped |
-| Anything else | | `{"statusCode":1,"description":"BILL NOT FOUND"}`, invented | Not found |
+| 1234567890 | PKR 100,000 | The API's reply, unchanged | No alert |
+| 4567890123 | PKR 450,000 | Invented, same 40/35/20/5 split and accounts | Alert, still paid |
+| 7890123456 | PKR 1,250,000 | Invented, same split and accounts | Stopped |
+| Any other valid reference | PKR 100,000 | The API's reply, with the reference echoed, as the live API does | No alert |
 
-The mock matches on the bill reference only; any institution is accepted and shown as typed. Replacing `billInquiry()` with a server-side call to the API is the only change a live version needs.
+The mock matches on the bill reference only. A reply whose `statusCode` is not 0 still shows "No bill found" on the phone, though neither the mock nor the live API has produced one. Replacing `billInquiry()` with a server-side call to the API is the only change a live version needs.
 
 ## What changes from the reference screen
 
@@ -96,7 +105,7 @@ The phone has three screens: the bill form, a busy screen while looking up, and 
 
 ## How a payment plays out
 
-1. Enter an institution and a bill reference, or tap one of the three demo bills.
+1. Pick the institution, FBR, and enter a 10-character bill reference, or tap one of the three demo bills.
 2. Press Look up bill. The phone shows the bill: institution, bill reference and bill ID, the four components with their accounts, the total, and the status Unpaid.
 3. Press Pay. The status changes to "Payment in screening", and the dots under it light up to the middle one, which stands for screening.
 4. The payment pauses at the screening dot.
@@ -124,7 +133,7 @@ As in RSOP demo 2: Astro 7.3 with static output, strict TypeScript, hand-written
 | Check | How |
 |---|---|
 | Builds cleanly | `npm run build` |
-| The mock answers like the API | `npm run check` compares bill 123 with the captured reply byte for byte |
+| The mock answers like the API | `npm run check` compares bill 1234567890, and any other reference, with the captured reply byte for byte |
 | Data is sound | Rule and typology numbers are unique and three digits; every rule is used by a typology; every typology can reach interdiction; every demo bill adds up |
 | Mock screening keeps its promises | `npm run check` runs every row of the table in [Mock screening](#mock-screening) |
 | Looks right | Screenshots in both themes, before a lookup, on the bill and after each outcome; a fit check at 15 window sizes that every phone screen fits without inner scrolling |
@@ -140,8 +149,10 @@ As in RSOP demo 2: Astro 7.3 with static output, strict TypeScript, hand-written
 | Phone-width windows | No frame; the app fills the window | Unconfirmed |
 | Keep a debtors list? | No; one fictional account holder | Confirmed 2026-10-21 |
 | Where the bill comes from | A local mock in the API's reply shape | Confirmed 2026-10-21 |
-| The reply for an unknown bill | Invented `statusCode` 1, "BILL NOT FOUND" | Unconfirmed |
-| Bills 456 and 789 | Invented to reach the alert and stopped outcomes | Unconfirmed |
+| Institution | A dropdown with FBR only | Confirmed 2026-10-21 |
+| Bill reference | Exactly 10 letters or digits | Confirmed 2026-10-21 |
+| Any other valid reference | The API's standard bill, as the live API answers | Unconfirmed |
+| Bills 4567890123 and 7890123456 | Invented to reach the alert and stopped outcomes | Unconfirmed |
 | Screening bands | Alert from PKR 250,000; stopped from PKR 1,000,000 | Unconfirmed |
 | Paying the same bill twice | Allowed; the mock does not mark bills paid | Unconfirmed |
 | Where screening happens in the path | At the middle dot, before the biller | Unconfirmed |

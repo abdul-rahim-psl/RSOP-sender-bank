@@ -326,7 +326,8 @@
   gap: 5px;
 }
 
-.w-field input {
+.w-field input,
+.w-field select {
   width: 100%;
   min-width: 0;
   padding: 8px 12px;
@@ -337,7 +338,38 @@
   font-weight: 800;
 }
 
-.w-field input:focus-visible {
+.w-field input::placeholder {
+  color: var(--faint);
+  font-weight: 600;
+}
+
+/* The native arrow is hidden so the dropdown matches the text field; the drawn chevron takes its place. */
+.w-select {
+  position: relative;
+  display: grid;
+}
+
+.w-select select {
+  appearance: none;
+  padding-right: 36px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.w-select .icon {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  color: var(--mut);
+  translate: 0 -50%;
+  pointer-events: none;
+}
+
+.w-field input:focus-visible,
+.w-field select:focus-visible {
   border-color: var(--select);
   outline: 2px solid var(--select);
   outline-offset: 1px;
@@ -345,12 +377,13 @@
 
 .w-quick {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
 
 .w-quick-label {
-  margin-right: 2px;
+  flex-basis: 100%;
   color: var(--faint);
   font-size: 0.7rem;
   font-weight: 800;
@@ -359,13 +392,16 @@
 
 .w-chip {
   flex: 1;
+  min-width: 0;
   min-height: 32px;
+  padding: 0 4px;
   border: 1px solid var(--stroke);
   border-radius: 999px;
   background: transparent;
   color: var(--ink-2);
-  font-size: 0.78rem;
-  font-weight: 800;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
   cursor: pointer;
   transition:
     background 0.15s,

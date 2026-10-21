@@ -4,9 +4,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { INTERDICT_AT, HIT_WEIGHT, rules, typologies } from '../src/data/network.ts';
 import { account, initials } from '../src/data/account.ts';
-import { SAMPLE_INSTITUTION, sampleBills } from '../src/data/bills.ts';
+import { BILL_REF_LENGTH, institutions, sampleBills } from '../src/data/bills.ts';
 import { band } from '../src/lib/screen.ts';
-import { billInquiry, toBill } from '../src/lib/biller.ts';
+import { billInquiry, billRefProblem, toBill } from '../src/lib/biller.ts';
 
 const unique = (xs: string[]) => new Set(xs).size === xs.length;
 
@@ -36,18 +36,28 @@ test('the account holder is fictional', () => {
   assert.equal(initials(account.name).length, 2);
 });
 
-// The reply captured from POST /api/v1/billInquiry with institution "abc" and bill reference "123".
+// The reply captured on 2026-10-21 from POST http://192.168.9.15:9991/api/v1/billInquiry, institution "FBR", bill reference "1234567890".
 const apiSample =
-  '{"statusCode":0,"description":"SUCCESS","billId":"12345","billReference":"123","total":"100000","currency":"PKR","billInquiryAccounts":[{"componentName":"Custom duty","componentAccount":"1111111111","componentAmount":"40000"},{"componentName":"Sales tax","componentAccount":"2222222222","componentAmount":"35000"},{"componentName":"Withholding tax","componentAccount":"3333333333","componentAmount":"20000"},{"componentName":"Other levy","componentAccount":"4444444444","componentAmount":"5000"}]}';
+  '{"statusCode":0,"description":"SUCCESS","billId":"12345","billReference":"1234567890","total":"100000","currency":"PKR","billInquiryAccounts":[{"componentName":"Custom duty","componentAccount":"1111111111","componentAmount":"40000"},{"componentName":"Sales tax","componentAccount":"2222222222","componentAmount":"35000"},{"componentName":"Withholding tax","componentAccount":"3333333333","componentAmount":"20000"},{"componentName":"Other levy","componentAccount":"4444444444","componentAmount":"5000"}]}';
 
-test('bill 123 answers exactly as the API did', async () => {
-  const res = await billInquiry({ institution: SAMPLE_INSTITUTION, billReference: '123' });
+test('the institution list is FBR only', () => {
+  assert.deepEqual(institutions, ['FBR']);
+});
+
+test('bill 1234567890 answers exactly as the API did', async () => {
+  const res = await billInquiry({ institution: 'FBR', billReference: '1234567890' });
   assert.equal(JSON.stringify(res), apiSample);
 });
 
-test('every demo bill is complete, its components add up, and the account can pay it', () => {
+test("any other reference gets the API's standard bill, with the reference echoed", async () => {
+  const res = await billInquiry({ institution: 'FBR', billReference: ' ZX90PQ12AB ' });
+  assert.equal(JSON.stringify(res), apiSample.replace('"1234567890"', '"ZX90PQ12AB"'));
+});
+
+test('every demo bill has a valid reference, adds up, and the account can pay it', () => {
   for (const [ref, res] of Object.entries(sampleBills)) {
-    const bill = toBill(SAMPLE_INSTITUTION, res)!;
+    assert.equal(billRefProblem(ref), null, ref);
+    const bill = toBill('FBR', res)!;
     assert.ok(bill, ref);
     assert.equal(bill.billReference, ref);
     assert.equal(bill.currency, 'PKR');
@@ -62,10 +72,15 @@ test('the demo bills show each mock outcome once', () => {
   assert.deepEqual(totals.map(band), [0, 1, 2]);
 });
 
-test('an unknown bill reference is not found, and references are trimmed', async () => {
-  const miss = await billInquiry({ institution: SAMPLE_INSTITUTION, billReference: '999' });
-  assert.notEqual(miss.statusCode, 0);
-  assert.equal(toBill(SAMPLE_INSTITUTION, miss), null);
-  const hit = await billInquiry({ institution: SAMPLE_INSTITUTION, billReference: ' 123 ' });
-  assert.equal(hit.statusCode, 0);
+test('a bill reference is exactly 10 letters or digits', () => {
+  assert.equal(BILL_REF_LENGTH, 10);
+  for (const ok of ['1234567890', 'AB12CD34EF', 'abcdefghij', ' 1234567890 ']) assert.equal(billRefProblem(ok), null, ok);
+  assert.match(billRefProblem('')!, /Enter/);
+  assert.match(billRefProblem('123456789')!, /this has 9/);
+  assert.match(billRefProblem('12345678901')!, /this has 11/);
+  for (const bad of ['ABC-123456', '12345 7890', 'ÄBCDEFGHIJ']) assert.match(billRefProblem(bad)!, /letters and digits/, bad);
+});
+
+test('a reply that is not SUCCESS gives no bill', () => {
+  assert.equal(toBill('FBR', { statusCode: 1, description: 'BILL NOT FOUND' }), null);
 });

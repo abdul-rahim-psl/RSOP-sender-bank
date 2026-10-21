@@ -1,4 +1,4 @@
-/* The sender demo: senders | phone | path | recipients over the four screening panels, as on the reference screen. */
+/* The sender demo: phone | path | bill. The phone looks a bill up and pays it; the path shows it screened on the way. */
 
 :root {
   --screen: #11141f;
@@ -52,7 +52,7 @@
 /* ── Page ─────────────────────────────────────────────────────────── */
 
 .demo {
-  width: min(100% - 2 * var(--gutter), 1560px);
+  width: min(100% - 2 * var(--gutter), 1280px);
   margin-inline: auto;
   padding: 22px 0 36px;
 }
@@ -90,16 +90,11 @@
   letter-spacing: 0.005em;
 }
 
-.iso,
-.panel-sum {
+.iso {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--faint);
   white-space: nowrap;
-}
-
-.panel-sum {
-  color: var(--mut);
 }
 
 /* ── Lights: a grey bulb until it carries a tone, then a coloured one with its glyph ── */
@@ -119,10 +114,6 @@
     background 0.25s,
     border-color 0.25s,
     box-shadow 0.25s;
-}
-
-.light.md {
-  --s: 22px;
 }
 
 .light.lg {
@@ -162,14 +153,10 @@
 
 .stage {
   display: grid;
-  grid-template-columns: minmax(250px, 310px) auto minmax(150px, 1fr) minmax(250px, 310px);
-  grid-template-areas: 'senders phone path recipients';
+  grid-template-columns: auto minmax(150px, 1fr) minmax(300px, 380px);
+  grid-template-areas: 'phone path bill';
   align-items: start;
   gap: 18px;
-}
-
-.parties.sender {
-  grid-area: senders;
 }
 
 .phone-wrap {
@@ -180,53 +167,8 @@
   grid-area: path;
 }
 
-.parties.recipient {
-  grid-area: recipients;
-}
-
-/* ── Party lists ──────────────────────────────────────────────────── */
-
-.parties {
-  padding: 16px 14px 14px;
-}
-
-.party-list {
-  display: grid;
-  gap: 8px;
-}
-
-.party {
-  display: flex;
-  gap: 6px;
-}
-
-.party-pick {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 11px;
-  min-width: 0;
-  min-height: 62px;
-  padding: 9px 12px;
-  border: 1px solid var(--stroke);
-  border-radius: 12px;
-  background: var(--raised);
-  text-align: left;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    border-color 0.15s;
-}
-
-.party-pick:hover {
-  border-color: var(--stroke-strong);
-  background: var(--hover);
-}
-
-.party-pick[aria-pressed='true'] {
-  border-color: var(--select);
-  background: color-mix(in srgb, var(--select) 10%, transparent);
-  box-shadow: inset 0 0 0 1px var(--select);
+.bill {
+  grid-area: bill;
 }
 
 .avatar {
@@ -244,94 +186,14 @@
   letter-spacing: 0.04em;
 }
 
-.avatar.sm {
-  width: 30px;
-  height: 30px;
-  font-size: 0.66rem;
-}
-
-.party-text {
-  display: grid;
-  gap: 1px;
-  min-width: 0;
-}
-
-.party-name {
-  overflow: hidden;
-  font-size: 0.9rem;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.party-meta,
-.party-prov {
-  overflow: hidden;
-  color: var(--mut);
-  font-size: 0.74rem;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.party-meta {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 500;
-}
-
-.party-flag,
-.receipt {
-  display: inline-flex;
-  align-items: center;
-  justify-self: start;
-  gap: 5px;
-  margin-top: 4px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.party-flag {
-  padding: 1px 8px;
-  border: 1px solid color-mix(in srgb, var(--fail) 45%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--fail) 10%, transparent);
-  color: var(--fail-ink);
-}
-
-.receipt .light {
-  --s: 15px;
-}
-
-.party-flag[hidden],
-.receipt[hidden] {
-  display: none;
-}
-
-.party-edit {
+.empty-icon {
   display: grid;
   place-items: center;
-  flex: 0 0 42px;
-  border: 1px solid var(--stroke);
-  border-radius: 12px;
-  background: transparent;
+  width: 56px;
+  height: 56px;
+  border: 1px dashed var(--stroke-strong);
+  border-radius: 50%;
   color: var(--mut);
-  cursor: pointer;
-  transition:
-    color 0.15s,
-    background 0.15s;
-}
-
-.party-edit:hover {
-  color: var(--ink);
-  background: var(--hover);
-}
-
-[data-busy] .party-pick,
-[data-busy] .party-edit {
-  cursor: progress;
-  opacity: 0.7;
 }
 
 /* ── Phone ────────────────────────────────────────────────────────── */
@@ -427,32 +289,20 @@
   padding: 8px 16px 18px;
 }
 
-.screen[data-screen='empty'] .scr-empty,
 .screen[data-screen='form'] .scr-form,
-.screen[data-screen='sending'] .scr-sending,
+.screen[data-screen='busy'] .scr-busy,
+.screen[data-screen='bill'] .scr-bill,
 .screen[data-screen='done'] .scr-done {
   display: flex;
 }
 
-.scr-empty,
-.scr-sending,
+.scr-busy,
 .scr-done {
   align-items: center;
   justify-content: center;
   text-align: center;
 }
 
-.empty-icon {
-  display: grid;
-  place-items: center;
-  width: 58px;
-  height: 58px;
-  border: 1px dashed var(--stroke-strong);
-  border-radius: 50%;
-  color: var(--mut);
-}
-
-.empty-title,
 .s-title {
   margin-top: 4px;
   font-family: var(--font-serif);
@@ -461,7 +311,6 @@
   line-height: 1.1;
 }
 
-.empty-text,
 .s-text,
 .d-text {
   max-width: 24ch;
@@ -528,101 +377,49 @@
   font-size: 0.7rem;
 }
 
-.w-to,
-.w-amount {
+.w-title {
+  margin-top: 2px;
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.w-field {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
+  gap: 5px;
 }
 
-.w-to-party {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 10px;
-  border: 1px solid var(--stroke);
-  border-radius: 12px;
-  background: var(--raised);
-}
-
-.w-to-party[data-empty='true'] {
-  border-style: dashed;
-  background: transparent;
-}
-
-.w-to-party[data-empty='true'] .avatar {
-  border-style: dashed;
-  color: var(--mut);
-}
-
-.w-to-text {
-  display: grid;
+.w-field input {
+  width: 100%;
   min-width: 0;
-}
-
-.w-to-name {
-  overflow: hidden;
-  font-size: 0.86rem;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.w-to-meta {
-  overflow: hidden;
-  color: var(--mut);
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.w-amount-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
+  padding: 8px 12px;
   border: 1px solid var(--stroke-strong);
   border-radius: 12px;
   background: var(--raised);
+  font-size: 1rem;
+  font-weight: 800;
 }
 
-/* The box shows the focus ring, so the input inside it does not draw its own. */
-.w-amount-box:has(input:focus-visible) {
+.w-field input:focus-visible {
   border-color: var(--select);
   outline: 2px solid var(--select);
   outline-offset: 1px;
 }
 
-.w-amount-box input:focus-visible {
-  outline: none;
-}
-
-.w-cur {
-  color: var(--mut);
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.w-amount-box input {
-  flex: 1;
-  width: 100%;
-  min-width: 0;
-  padding: 4px 0;
-  border: 0;
-  background: transparent;
-  font-size: 1.4rem;
-  font-weight: 900;
-}
-
-.w-amount-box input::placeholder {
-  color: var(--faint);
-}
-
 .w-quick {
   display: flex;
+  align-items: center;
   gap: 6px;
+}
+
+.w-quick-label {
+  margin-right: 2px;
+  color: var(--faint);
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .w-chip {
@@ -661,8 +458,72 @@
   color: var(--ink-2);
 }
 
-.w-hint[data-flash] {
+.w-hint[data-flash],
+.w-hint[data-error] {
   color: var(--fail-ink);
+}
+
+/* The bill screen: back link, the total, then one line per component. */
+.w-back {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 4px;
+  margin-left: -4px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.w-back:hover {
+  background: var(--hover);
+}
+
+.b-head {
+  display: grid;
+  gap: 2px;
+}
+
+.b-total {
+  font-size: 1.6rem;
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.b-meta {
+  color: var(--mut);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.b-lines {
+  display: grid;
+  border-top: 1px solid var(--stroke);
+}
+
+.b-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 2px;
+  border-bottom: 1px solid var(--stroke);
+  font-size: 0.8rem;
+}
+
+.b-name {
+  color: var(--ink-2);
+  font-weight: 700;
+}
+
+.b-amt {
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .send {
@@ -829,136 +690,116 @@
   text-align: center;
 }
 
-/* ── Screening panels ─────────────────────────────────────────────── */
+/* ── Bill panel ───────────────────────────────────────────────────── */
 
-.monitor {
-  display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.5fr) minmax(0, 1.5fr) minmax(0, 1.15fr);
-  gap: 14px;
-  margin-top: 22px;
-}
-
-.mon {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+.bill {
   padding: 16px 16px 14px;
 }
 
-.dir-body {
+.bill-empty {
   display: grid;
-  flex: 1;
-  place-items: center;
-  align-content: center;
-  gap: 14px;
-  padding: 16px 4px 8px;
+  justify-items: center;
+  gap: 12px;
+  padding: 28px 8px 22px;
+  color: var(--mut);
+  font-size: 0.84rem;
+  font-weight: 700;
   text-align: center;
 }
 
-.dir-text {
-  max-width: 22ch;
-  color: var(--ink-2);
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.lights {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
-  gap: 10px 6px;
-  margin-bottom: 16px;
-}
-
-.lt {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--mut);
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.lt:has(.light[data-tone]) {
-  color: var(--ink);
-}
-
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 16px;
-  margin-top: auto;
-  padding-top: 12px;
-  border-top: 1px solid var(--stroke);
-  color: var(--mut);
-  font-size: 0.74rem;
-  font-weight: 700;
-}
-
-.legend li {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.legend .light {
-  --s: 14px;
-  animation: none;
-}
-
-.al-list {
+.bill-body {
   display: grid;
   gap: 10px;
 }
 
-.al-row {
+.bill[data-state='empty'] .bill-body,
+.bill:not([data-state='empty']) .bill-empty {
+  display: none;
+}
+
+.bill-meta {
   display: grid;
-  gap: 8px;
-  padding: 10px 12px;
+  margin-bottom: 4px;
+  border-top: 1px solid var(--stroke);
+}
+
+.bill-meta div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 2px;
+  border-bottom: 1px solid var(--stroke);
+  font-size: 0.8rem;
+}
+
+.bill-meta dt {
+  color: var(--mut);
+  font-weight: 700;
+}
+
+.bill-meta dd {
+  overflow: hidden;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bill-lines {
+  display: grid;
+  gap: 6px;
+}
+
+.bill-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
   border: 1px solid var(--stroke);
   border-radius: 12px;
   background: var(--raised);
 }
 
-.al-label {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 2px 8px;
-  color: var(--ink-2);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-}
-
-.al-label span {
-  color: var(--faint);
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.al-body {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.al-text {
+.bill-line-text {
+  display: grid;
   flex: 1;
   min-width: 0;
-  padding: 6px 10px;
-  border: 1px solid var(--stroke);
-  border-radius: 8px;
-  background: var(--panel-solid);
-  color: var(--mut);
-  font-family: var(--font-mono);
-  font-size: 0.74rem;
 }
 
-.al-row:has(.light[data-tone]) .al-text {
-  color: var(--ink);
+.bill-line-name {
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.bill-line-acct {
+  color: var(--mut);
+  font-size: 0.7rem;
+}
+
+.bill-line-amt {
+  font-size: 0.82rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.bill-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 2px 0;
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.bill-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid color-mix(in srgb, var(--tone, var(--stroke)) 45%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--tone, transparent) 10%, transparent);
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 /* ── How it decides ───────────────────────────────────────────────── */
@@ -1003,122 +844,40 @@
   font-weight: 800;
 }
 
+.how-sub {
+  margin-top: 14px;
+}
+
 .how-note {
   margin-top: 10px;
   color: var(--faint);
   font-size: 0.76rem;
 }
 
-/* ── Edit dialog ──────────────────────────────────────────────────── */
-
-.dlg {
-  width: min(440px, calc(100vw - 32px));
-  padding: 0;
-  color: var(--ink);
-  box-shadow: var(--shadow);
-}
-
-.dlg::backdrop {
-  background: rgba(5, 7, 12, 0.6);
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
-}
-
-.dlg-form {
-  display: grid;
-  gap: 14px;
-  padding: 22px;
-}
-
-.dlg-form h2 {
-  font-family: var(--font-serif);
-  font-size: 1.6rem;
-  font-weight: 500;
-}
-
-.check {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--stroke);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.check input {
-  width: 18px;
-  height: 18px;
-  margin: 2px 0 0;
-  accent-color: var(--fail);
-}
-
-.check > span {
-  display: grid;
-  gap: 2px;
-  font-size: 0.84rem;
-}
-
-.dlg-note {
-  display: flex;
-  gap: 8px;
-  padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--wait) 45%, transparent);
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--wait) 10%, transparent);
-  color: var(--ink-2);
-  font-size: 0.84rem;
-}
-
-.dlg-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
 /* ── Smaller screens ──────────────────────────────────────────────── */
 
-/* The path drops under the stage and runs its full width, like a progress bar. */
-@media (max-width: 1239px) {
+/* The path drops under the phone and the bill and runs their full width, like a progress bar. */
+@media (max-width: 899px) {
   .stage {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas:
-      'senders phone recipients'
-      'path path path';
+      'phone bill'
+      'path path';
   }
 
   .path {
     padding: 4px 8px 0;
   }
-
-  .monitor {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
-@media (max-width: 899px) {
-  .stage {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      'senders phone'
-      'recipients phone'
-      'path path';
-  }
-}
-
-/* One column, in the order the payment travels: who sends, the phone, the path, who receives. */
+/* One column, in the order the payment travels: the phone, the path, the biller. */
 @media (max-width: 639px) {
   .stage {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
-      'senders'
       'phone'
       'path'
-      'recipients';
-  }
-
-  .monitor {
-    grid-template-columns: minmax(0, 1fr);
+      'bill';
   }
 
   .intro .btn {

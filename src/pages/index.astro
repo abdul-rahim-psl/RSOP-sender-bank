@@ -3,23 +3,20 @@ import '../styles/demo.css';
 import Base from '../layouts/Base.astro';
 import AppHeader from '../components/AppHeader.astro';
 import Icon from '../components/Icon.astro';
-import PartyList from '../components/stage/PartyList.astro';
 import Phone from '../components/stage/Phone.astro';
 import Path from '../components/stage/Path.astro';
-import EditDialog from '../components/stage/EditDialog.astro';
-import Director from '../components/monitor/Director.astro';
-import LightGrid from '../components/monitor/LightGrid.astro';
-import Alerts from '../components/monitor/Alerts.astro';
-import { ALERT_AMOUNT, RAPID_FROM, STOP_AMOUNT, rules, typologies } from '../data/network';
+import BillPanel from '../components/stage/BillPanel.astro';
+import { ALERT_AMOUNT, RAPID_FROM, STOP_AMOUNT } from '../data/network';
+import { SAMPLE_INSTITUTION, sampleBills } from '../data/bills';
 import { money } from '../lib/format';
 
 const how = [
   { when: `Under ${money(ALERT_AMOUNT)}`, then: 'No alert' },
-  { when: `${money(ALERT_AMOUNT)} to ${money(STOP_AMOUNT - 0.01)}`, then: 'Alert raised; still delivered' },
+  { when: `${money(ALERT_AMOUNT)} to ${money(STOP_AMOUNT - 0.01)}`, then: 'Alert raised; still paid' },
   { when: `${money(STOP_AMOUNT)} or more`, then: 'Stopped by a typology' },
-  { when: `The sender's payment no. ${RAPID_FROM} or later`, then: 'Counts one level higher' },
-  { when: 'Sender on the block list', then: 'Stopped by the event flow check' },
+  { when: `The account's payment no. ${RAPID_FROM} or later`, then: 'Counts one level higher' },
 ];
+const bills = Object.entries(sampleBills).map(([ref, r]) => ({ ref, total: money(Number(r.total), r.currency) }));
 ---
 
 <Base title="Sender-initiated payment">
@@ -28,7 +25,10 @@ const how = [
     <div class="intro">
       <div>
         <h1 class="title">Sender-initiated payment<span class="pd">.</span></h1>
-        <p>Pick a sender and a recipient, enter an amount and press Send. The payment is screened before it is delivered.</p>
+        <p>
+          Enter an institution and a bill reference on the phone, look up the bill and pay it. The payment is screened
+          before it reaches the biller.
+        </p>
       </div>
       <button class="btn" type="button" popovertarget="how">
         <Icon name="info" size={16} />
@@ -37,47 +37,11 @@ const how = [
     </div>
 
     <section class="stage" aria-label="Payment">
-      <PartyList kind="sender" />
       <Phone />
       <Path />
-      <PartyList kind="recipient" />
+      <BillPanel />
     </section>
-
-    <section class="monitor" aria-label="Screening">
-      <Director />
-      <LightGrid
-        kind="rule"
-        title="Rules"
-        ids={rules}
-        legend={[
-          { tone: 'ok', word: 'No hit' },
-          { tone: 'warn', word: 'Hit' },
-          { tone: 'info', word: 'Evaluating' },
-        ]}
-      />
-      <LightGrid
-        kind="typology"
-        title="Typologies"
-        ids={typologies.map((t) => t.id)}
-        legend={[
-          { tone: 'ok', word: 'Clear' },
-          { tone: 'warn', word: 'Alert' },
-          { tone: 'fail', word: 'Interdict' },
-        ]}
-      />
-      <Alerts />
-    </section>
-
-    <p class="foot-note">
-      <Icon name="info" size={15} />
-      <span>
-        <strong>Mock data.</strong> Nothing here is connected to a live system. People, phone numbers and wallet providers are
-        fictional, and the screening outcomes come from invented rules of thumb, not real rule or typology logic.
-      </span>
-    </p>
   </main>
-
-  <EditDialog />
 
   <div id="how" class="pop glass" popover>
     <p class="seclabel">Mock screening</p>
@@ -94,7 +58,24 @@ const how = [
         }
       </tbody>
     </table>
-    <p class="how-note">Invented for the demo. Clear all resets every sender's payment count.</p>
+    <p class="seclabel how-sub">Demo bills at institution {SAMPLE_INSTITUTION}</p>
+    <table class="how">
+      <tbody>
+        {
+          bills.map((b) => (
+            <tr>
+              <th scope="row" class="mono">{b.ref}</th>
+              <td>{b.total}</td>
+            </tr>
+          ))
+        }
+        <tr>
+          <th scope="row">Any other reference</th>
+          <td>Bill not found</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="how-note">Invented for the demo; bill 123 matches the API's sample reply. Clear all resets the payment count.</p>
   </div>
 </Base>
 

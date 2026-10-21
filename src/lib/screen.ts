@@ -16,8 +16,7 @@ export type TypologyResult = 'clear' | 'alert' | 'interdict';
 export interface Payment {
   id: string;
   amount: number;
-  senderBlocked: boolean;
-  /** Payments this sender made before this one, since Clear all. */
+  /** Payments this account made before this one, since Clear all. */
   priorSends: number;
 }
 
@@ -27,7 +26,6 @@ export interface Screening {
   rapid: boolean;
   hits: string[];
   typologies: { id: string; score: number; result: TypologyResult }[];
-  eventFlowBlock: boolean;
   interdiction: string[];
   alerting: string[];
   adjudicator: 'ALRT' | 'NALT';
@@ -81,10 +79,9 @@ export function screen(rules: string[], typologies: Typology[], p: Payment): Scr
     rapid,
     hits: rules.filter((r) => hits.has(r)),
     typologies: scored,
-    eventFlowBlock: p.senderBlocked,
     interdiction,
     alerting,
     adjudicator: alerting.length ? 'ALRT' : 'NALT',
-    delivered: !p.senderBlocked && interdiction.length === 0,
+    delivered: interdiction.length === 0,
   };
 }

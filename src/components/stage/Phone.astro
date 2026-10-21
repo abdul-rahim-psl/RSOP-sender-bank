@@ -1,9 +1,8 @@
 ---
 import Icon from '../Icon.astro';
 import Light from '../Light.astro';
-import { CURRENCY, quickAmounts } from '../../data/parties';
-
-const fmt0 = new Intl.NumberFormat('en-US');
+import { account, initials } from '../../data/account';
+import { SAMPLE_INSTITUTION, sampleBills } from '../../data/bills';
 ---
 
 <div class="phone-wrap">
@@ -12,7 +11,7 @@ const fmt0 = new Intl.NumberFormat('en-US');
     <span class="hw hw-vol-down" aria-hidden="true"></span>
     <span class="hw hw-power" aria-hidden="true"></span>
 
-    <div class="screen" data-screen="empty">
+    <div class="screen" data-screen="form" style={`--pc: var(--c-${account.color})`}>
       <div class="sbar" aria-hidden="true">
         <span class="sbar-time" data-clock>09:41</span>
         <span class="island"></span>
@@ -24,77 +23,82 @@ const fmt0 = new Intl.NumberFormat('en-US');
         </svg>
       </div>
 
-      <div class="scr scr-empty" data-scr="empty">
-        <span class="empty-icon"><Icon name="phone" size={26} /></span>
-        <p class="empty-title">No sender yet</p>
-        <p class="empty-text">Pick a sender to open their wallet.</p>
-        <noscript><p class="empty-text">This demo needs JavaScript.</p></noscript>
-      </div>
-
-      <form class="scr scr-form" data-scr="form" data-send-form novalidate>
+      <form class="scr scr-form" data-scr="form" data-inquiry-form novalidate>
         <div class="w-head">
-          <span class="avatar" aria-hidden="true" data-w-initials></span>
+          <span class="avatar" aria-hidden="true">{initials(account.name)}</span>
           <div>
-            <p class="w-hi">Hi, <span data-w-first></span></p>
-            <p class="w-prov" data-w-provider></p>
+            <p class="w-hi">Hi, {account.name.split(' ')[0]}</p>
+            <p class="w-prov">{account.provider}</p>
           </div>
         </div>
 
         <div class="w-bal">
           <p class="w-bal-label">Balance</p>
           <p class="w-bal-value" data-w-balance></p>
-          <p class="w-bal-phone" data-w-phone></p>
+          <p class="w-bal-phone">{account.phone}</p>
         </div>
 
-        <div class="w-to">
-          <p class="w-label">To</p>
-          <p class="w-to-party" data-w-to>
-            <span class="avatar sm" aria-hidden="true" data-w-to-initials></span>
-            <span class="w-to-text">
-              <span class="w-to-name" data-w-to-name></span>
-              <span class="w-to-meta" data-w-to-meta></span>
-            </span>
-          </p>
-        </div>
+        <p class="w-title">Pay a bill</p>
 
-        <label class="w-amount">
-          <span class="w-label">Amount</span>
-          <span class="w-amount-box">
-            <span class="w-cur" aria-hidden="true">{CURRENCY}</span>
-            <input
-              type="text"
-              inputmode="decimal"
-              autocomplete="off"
-              placeholder="0.00"
-              aria-describedby="w-hint"
-              data-amount
-            />
-          </span>
+        <label class="w-field">
+          <span class="w-label">Institution</span>
+          <input type="text" autocomplete="off" spellcheck="false" aria-describedby="w-hint" data-institution />
         </label>
 
-        <div class="w-quick" role="group" aria-label="Quick amounts">
+        <label class="w-field">
+          <span class="w-label">Bill reference</span>
+          <input type="text" autocomplete="off" spellcheck="false" aria-describedby="w-hint" data-bill-ref />
+        </label>
+
+        <div class="w-quick" role="group" aria-label="Demo bills">
+          <span class="w-quick-label" aria-hidden="true">Demo bills</span>
           {
-            quickAmounts.map((a) => (
-              <button class="w-chip" type="button" aria-pressed="false" data-quick={a}>
-                {fmt0.format(a)}
+            Object.keys(sampleBills).map((ref) => (
+              <button
+                class="w-chip"
+                type="button"
+                aria-pressed="false"
+                aria-label={`Demo bill ${ref} at ${SAMPLE_INSTITUTION}`}
+                data-sample={ref}
+              >
+                {ref}
               </button>
             ))
           }
         </div>
 
-        <p class="w-hint" id="w-hint" data-w-hint></p>
+        <p class="w-hint" id="w-hint" aria-live="polite" data-w-hint></p>
+        <noscript><p class="w-hint">This demo needs JavaScript.</p></noscript>
 
-        <button class="send" type="submit" aria-describedby="w-hint" data-send>
-          <Icon name="send" size={17} />
-          Send
+        <button class="send" type="submit" aria-describedby="w-hint" data-lookup>
+          <Icon name="search" size={17} />
+          Look up bill
         </button>
       </form>
 
-      <div class="scr scr-sending" data-scr="sending">
+      <div class="scr scr-busy" data-scr="busy">
         <span class="spinner" aria-hidden="true"></span>
-        <p class="s-title">Sending</p>
+        <p class="s-title" data-s-title></p>
         <p class="s-text" data-s-text></p>
         <p class="s-step" data-s-step></p>
+      </div>
+
+      <div class="scr scr-bill" data-scr="bill">
+        <button class="w-back" type="button" data-back>
+          <Icon name="back" size={16} />
+          Change bill
+        </button>
+        <div class="b-head">
+          <p class="w-label">Bill <span class="mono" data-b-id></span></p>
+          <p class="b-total" data-b-total></p>
+          <p class="b-meta"><span data-b-inst></span> · ref <span class="mono" data-b-ref></span></p>
+        </div>
+        <ul class="b-lines" aria-label="Bill components" data-b-lines></ul>
+        <p class="w-hint" id="b-hint" data-b-hint></p>
+        <button class="send" type="button" aria-describedby="b-hint" data-pay>
+          <Icon name="send" size={17} />
+          <span data-pay-label>Pay</span>
+        </button>
       </div>
 
       <div class="scr scr-done" data-scr="done">
@@ -102,12 +106,17 @@ const fmt0 = new Intl.NumberFormat('en-US');
         <p class="d-title" data-d-title></p>
         <p class="d-text" data-d-text></p>
         <dl class="d-receipt">
-          <div><dt>To</dt><dd data-d-to></dd></div>
+          <div><dt>Institution</dt><dd data-d-inst></dd></div>
+          <div><dt>Bill reference</dt><dd class="mono" data-d-bill></dd></div>
           <div><dt>Amount</dt><dd data-d-amount></dd></div>
           <div><dt>Reference</dt><dd class="mono" data-d-ref></dd></div>
         </dl>
-        <button class="send ghost" type="button" data-new-payment>New payment</button>
+        <button class="send ghost" type="button" data-new-payment>Pay another bill</button>
       </div>
     </div>
   </div>
 </div>
+
+<template data-b-line-tpl>
+  <li class="b-line"><span class="b-name"></span><span class="b-amt"></span></li>
+</template>

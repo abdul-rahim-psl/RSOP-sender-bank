@@ -33,8 +33,8 @@ export const ALERT_AT = 200;
 export const INTERDICT_AT = 400;
 
 /** Amount bands for the mock screening, in whole currency units. */
-export const ALERT_AMOUNT = 1_000;
-export const STOP_AMOUNT = 10_000;
+export const ALERT_AMOUNT = 250_000;
+export const STOP_AMOUNT = 1_000_000;
 
-/** The sender's payment count, since Clear all, from which activity counts as rapid (the third payment). */
+/** The account's payment count, since Clear all, from which activity counts as rapid (the third payment). */
 export const RAPID_FROM = 3;

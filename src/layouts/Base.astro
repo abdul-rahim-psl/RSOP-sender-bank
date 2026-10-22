@@ -6,9 +6,9 @@ interface Props {
   description?: string;
 }
 
-const site = 'Sender demo';
+const site = 'Sending app';
 const { title, description = 'A sender pays from their phone and the payment is screened, on mock data.' } = Astro.props;
-const pageTitle = title ? `${title} · ${site}` : site;
+const pageTitle = title ? `${site} · ${title}` : site;
 ---
 
 <!doctype html>

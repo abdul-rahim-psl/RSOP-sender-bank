@@ -2,7 +2,7 @@
 import Icon from '../Icon.astro';
 import Light from '../Light.astro';
 import { account, initials } from '../../data/account';
-import { BILL_REF_LENGTH, institutions, sampleRefs } from '../../data/bills';
+import { BILL_REF_LENGTH, institutions } from '../../data/bills';
 ---
 
 <div class="phone" role="group" aria-label="Sender's phone">
@@ -93,23 +93,6 @@ import { BILL_REF_LENGTH, institutions, sampleRefs } from '../../data/bills';
           data-bill-ref
         />
       </label>
-
-      <div class="w-quick" role="group" aria-label="Sample references">
-        <span class="w-quick-label" aria-hidden="true">Sample references</span>
-        {
-          sampleRefs.map((ref) => (
-            <button
-              class="w-chip"
-              type="button"
-              aria-pressed="false"
-              aria-label={`Sample reference ${ref}`}
-              data-sample={ref}
-            >
-              {ref}
-            </button>
-          ))
-        }
-      </div>
 
       <p class="w-hint" id="w-hint" aria-live="polite" data-w-hint></p>
       <noscript><p class="w-hint">This demo needs JavaScript.</p></noscript>

@@ -40,5 +40,3 @@ export const institutions = ['FBR'];
 /** A bill reference is exactly this many letters or digits. */
 export const BILL_REF_LENGTH = 10;
 
-/** Quick-fill references on the phone. Every one is looked up on the live API, like anything typed. */
-export const sampleRefs = ['1234567890', '4567890123', '7890123456'];

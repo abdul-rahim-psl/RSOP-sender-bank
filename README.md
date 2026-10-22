@@ -46,7 +46,7 @@ This runs two things:
 - `astro check`: strict TypeScript across every page, component and data file.
 - `npm run check:data`: Node's built-in test runner on `tests/`. It checks:
   - **The calls.** A lookup posts the institution and trimmed reference to the API and returns its reply unchanged; every reference goes to the API, the sample ones included. Paying a looked-up bill posts exactly the bill ID, reference and total the API takes.
-  - **The bills.** The institution list is FBR only. A bill reference must be exactly 10 letters or digits, and the sample references are valid. The API's captured bill reads as a complete bill whose components add up and which the account can afford.
+  - **The bills.** The institution list is FBR only. A bill reference must be exactly 10 letters or digits. The API's captured bill reads as a complete bill whose components add up and which the account can afford.
   - **The data.** The account holder is fictional, with a 555-01xx phone number.
   - **The proxy.** It forwards only a well-formed FBR inquiry (two fields) or payment (three fields), with the `Charset` header, the participant codes and a fresh `X-Request-ID`. It refuses anything else without calling the API, passes the API's status through, and answers 502 when the API cannot be reached.
 
@@ -56,7 +56,7 @@ This runs two things:
 |---|---|
 | The bill API proxy, and a server for `dist/` with the proxy | `server/bill-api.mjs`, `server/serve.mjs` |
 | The proxy's settings: API address, participant codes, timeout | `.env` (from `.env.example`), read by `server/config.mjs` |
-| The API's request and reply shapes, FBR, the reference length, sample references | `src/data/bills.ts` |
+| The API's request and reply shapes, FBR, the reference length | `src/data/bills.ts` |
 | The bill inquiry and bill payment calls, and the bill reference rule | `src/lib/biller.ts` |
 | The paths the page calls on its own server | `src/data/api.ts` |
 | The account holder and currency | `src/data/account.ts` |
@@ -71,7 +71,7 @@ The page calls `/api/v1/billInquiry` and `/api/v1/billPayment` on its own server
 
 The phone always opens on the Meezan Bank sign-in screen. Any username and password will do; nothing is sent.
 
-1. The institution dropdown has one value, FBR. Type a bill reference of exactly 10 letters or digits, or tap a sample reference: 1234567890, 4567890123 or 7890123456. All of them, like anything typed, are looked up on the live API. Until the reference is valid, Look up stays disabled and the hint says what is wrong.
+1. The institution dropdown has one value, FBR. Type a bill reference of exactly 10 letters or digits; it is looked up on the live API. Until the reference is valid, Look up stays disabled and the hint says what is wrong.
 2. Press Look up bill. The phone shows the bill: institution, bill reference and bill ID; the four components with their accounts and amounts; the total; and the status, Unpaid. So far the API has answered the same PKR 100,000 bill for every reference, echoing the reference back.
 3. Press Pay. The bill stays on screen with the status "Paying", and the phone sends the bill payment (`billId`, `billReference`, `totalAmount`) to the biller. On SUCCESS every component ticks green, the status shows the payment reference and "FBR: SUCCESS", and the balance drops by the total. On any other answer the status says "Payment failed" with the biller's description, and the balance stays the same. Pay another bill returns to the form.
 

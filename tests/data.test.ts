@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { account, initials } from '../src/data/account.ts';
-import { BILL_REF_LENGTH, institutions, sampleRefs } from '../src/data/bills.ts';
+import { BILL_REF_LENGTH, institutions } from '../src/data/bills.ts';
 import { billInquiry, billPayment, billRefProblem, paymentRequest, toBill } from '../src/lib/biller.ts';
 import { endpoints } from '../src/data/api.ts';
 
@@ -32,19 +32,6 @@ test('a lookup posts the institution and trimmed reference to the API, and retur
   const res = await billInquiry({ institution: 'FBR', billReference: ' 1234567890 ' }, post);
   assert.deepEqual(calls, [{ path: '/api/v1/billInquiry', body: { institution: 'FBR', billReference: '1234567890' } }]);
   assert.equal(JSON.stringify(res), apiSample);
-});
-
-test('every lookup goes to the API, the sample references included', async () => {
-  const { calls, post } = fakePost();
-  for (const ref of sampleRefs) await billInquiry({ institution: 'FBR', billReference: ref }, post);
-  assert.deepEqual(
-    calls.map((c) => c.body),
-    sampleRefs.map((billReference) => ({ institution: 'FBR', billReference })),
-  );
-});
-
-test('the sample references are valid', () => {
-  for (const ref of sampleRefs) assert.equal(billRefProblem(ref), null, ref);
 });
 
 test("the API's bill reads as a complete bill the account can pay", () => {

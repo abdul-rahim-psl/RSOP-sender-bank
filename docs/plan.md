@@ -140,7 +140,7 @@ The phone has three screens: the bill form, a busy screen while looking up, and 
 
 ## How a payment plays out
 
-1. Pick the institution, FBR, and enter a 10-character bill reference, or tap one of the three sample references.
+1. Pick the institution, FBR, and enter a 10-character bill reference.
 2. Press Look up bill. The phone shows the bill: institution, bill reference and bill ID, the four components with their accounts, the total, and the status Unpaid.
 3. Press Pay. The status changes to "Paying", and the phone sends the bill payment to the biller.
 4. On SUCCESS each component ticks green, the balance drops by the total, and a popup shows the amount, the payment reference and the biller's answer. On any other answer the popup says "Payment failed" with the biller's description, and the balance stays the same.

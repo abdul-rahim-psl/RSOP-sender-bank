@@ -2,7 +2,6 @@
 // Everything visible is rendered at build time; this script only flips data-* state, fills in text and clones row templates.
 
 import { account, initials } from '../data/account';
-import { institutions } from '../data/bills';
 import { billInquiry, billPayment, billRefProblem, paymentRequest, toBill, type Bill } from '../lib/biller';
 import { money } from '../lib/format';
 import type { Tone } from '../lib/tone';
@@ -141,8 +140,6 @@ function check(): { ok: boolean; text: string; focus?: HTMLElement } {
 
 function renderForm() {
   q('[data-w-balance]').textContent = money(balance);
-  for (const chip of qa('[data-sample]'))
-    chip.setAttribute('aria-pressed', String(refInput.value.trim() === chip.dataset.sample));
   const c = check();
   hint.textContent = c.text;
   hint.dataset.ok = String(c.ok);
@@ -316,14 +313,6 @@ function outcome(paid: boolean, b: Bill, id: string, reply: { description?: stri
 
 instInput.addEventListener('change', renderForm);
 refInput.addEventListener('input', renderForm);
-
-for (const chip of qa<HTMLButtonElement>('[data-sample]')) {
-  chip.addEventListener('click', () => {
-    instInput.value = institutions[0]!;
-    refInput.value = chip.dataset.sample!;
-    renderForm();
-  });
-}
 
 form.addEventListener('submit', (e) => {
   e.preventDefault();

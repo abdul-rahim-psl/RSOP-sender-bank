@@ -432,49 +432,6 @@
   outline-offset: 1px;
 }
 
-.w-quick {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.w-quick-label {
-  flex-basis: 100%;
-  color: var(--faint);
-  font-size: 0.7rem;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.w-chip {
-  flex: 1;
-  min-width: 0;
-  min-height: 32px;
-  padding: 0 4px;
-  border: 1px solid var(--stroke);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--ink-2);
-  font-family: var(--font-mono);
-  font-size: 0.74rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    border-color 0.15s;
-}
-
-.w-chip:hover {
-  background: var(--hover);
-}
-
-.w-chip[aria-pressed='true'] {
-  border-color: var(--stroke-strong);
-  background: var(--raised);
-  color: var(--ink);
-}
-
 .w-hint {
   min-height: 1.4em;
   color: var(--mut);

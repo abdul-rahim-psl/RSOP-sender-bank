@@ -31,7 +31,7 @@ A one-screen, clickable demo of a sender-initiated bill payment. The phone is th
 1. **The API is the authority for the bill.** Its two inputs are the phone's only inputs. Its reply fields and their order are what the phone shows.
 2. **The phone's input rules.** Institution is a dropdown with one value, FBR. A bill reference is exactly 10 letters or digits; Look up stays disabled until it is. The API itself enforces neither rule; see [The API](#the-api).
 3. **No product branding.** No logo, product name, version, tenant or account address from the reference screen. Participant codes from the API's headers are not shown.
-4. **Fictional data only.** The account holder is invented. Phone numbers use the 555-01xx range set aside for fiction.
+4. **Fictional data only.** The account holder is invented.
 
 ## Bill inquiry and payment
 

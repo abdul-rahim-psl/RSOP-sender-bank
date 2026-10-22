@@ -37,6 +37,9 @@ export interface BillPaymentResponse {
 /** The institutions the phone offers. */
 export const institutions = ['FBR'];
 
+/** Each institution's full name, as a receipt names the biller. */
+export const billerNames: Record<string, string> = { FBR: 'Federal Board of Revenue' };
+
 /** A bill reference is exactly this many letters or digits. */
 export const BILL_REF_LENGTH = 10;
 

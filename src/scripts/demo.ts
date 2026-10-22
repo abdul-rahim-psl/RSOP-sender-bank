@@ -1,7 +1,8 @@
 // Sign in on the phone, look up a bill and pay it; the outcome of each lookup and payment opens as a popup.
 // Everything visible is rendered at build time; this script only flips data-* state, fills in text and clones row templates.
 
-import { account, initials } from '../data/account';
+import { account, accountTitle, initials, masked } from '../data/account';
+import { billerNames } from '../data/bills';
 import { billInquiry, billPayment, billRefProblem, paymentRequest, toBill, type Bill } from '../lib/biller';
 import { money } from '../lib/format';
 import type { Tone } from '../lib/tone';
@@ -75,13 +76,38 @@ interface Pop {
   facts?: [string, string, boolean?][];
   primary: PopAction;
   secondary?: PopAction;
+  receipt?: Receipt;
 }
+
+/** A payment's receipt: when, from whom to which biller, and the STAN to quote. */
+interface Receipt {
+  when: string;
+  from: { name: string; sub: string };
+  to: { badge: string; name: string; sub: string };
+  stan: string;
+}
+
+const receipt = q('[data-receipt]');
+/** The signed-in account's title, as a receipt prints it. */
+let holder = account.name.toUpperCase();
 
 let onClose: (() => void) | undefined;
 
 /** Shows a lookup's or a payment's outcome over the phone; the screens behind it can't be reached until it closes. */
 function showPop(o: Pop) {
   popCard.dataset.tone = o.tone;
+  popCard.toggleAttribute('data-receipt', !!o.receipt);
+  receipt.hidden = !o.receipt;
+  if (o.receipt) {
+    q('[data-r-amount]').textContent = o.amount ?? '';
+    q('[data-r-when]').textContent = o.receipt.when;
+    q('[data-r-from-name]').textContent = o.receipt.from.name;
+    q('[data-r-from-sub]').textContent = o.receipt.from.sub;
+    q('[data-r-to-badge]').textContent = o.receipt.to.badge;
+    q('[data-r-to-name]').textContent = o.receipt.to.name;
+    q('[data-r-to-sub]').textContent = o.receipt.to.sub;
+    q('[data-r-ref]').textContent = o.receipt.stan;
+  }
   q('[data-pop-kicker]').textContent = o.kicker;
   q('[data-pop-title]').textContent = o.title;
   q('[data-pop-amount]').textContent = o.amount ?? '';
@@ -187,7 +213,7 @@ function renderBill(b: Bill, stage: Stage, sub = '') {
 
   q('[data-pay-label]').textContent = `Pay ${money(b.total, b.currency)}`;
   const short = b.total > balance;
-  bHint.textContent = short ? 'That is more than your balance.' : `Splits across ${b.components.length} accounts at ${b.institution}.`;
+  bHint.textContent = short ? 'That is more than your balance.' : `Splits across ${b.components.length} account${b.components.length === 1 ? '' : 's'} at ${b.institution}.`;
   bHint.dataset.ok = String(!short);
   payBtn.setAttribute('aria-disabled', String(short));
 }
@@ -257,7 +283,8 @@ async function pay() {
   const b = bill!;
   const token = ++run;
   setBusy(true);
-  const id = `TX-${Math.floor(Math.random() * 0x1000000).toString(16).toUpperCase().padStart(6, '0')}`;
+  // The sender bank numbers each payment with a 6-digit STAN; the biller's reply carries none.
+  const stan = String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0');
   renderBill(b, 'paying', `Sending ${money(b.total, b.currency)} to ${b.institution}…`);
 
   const [reply] = await Promise.all([
@@ -270,43 +297,36 @@ async function pay() {
   renderBill(
     b,
     paid ? 'paid' : 'failed',
-    paid ? `Ref ${id} · ${b.institution}: ${reply.description}` : `${b.institution}: ${reply.description || 'no answer'} · balance unchanged`,
+    paid ? `STAN ${stan} · ${b.institution}: ${reply.description}` : `${b.institution}: ${reply.description || 'no answer'} · balance unchanged`,
   );
 
   setBusy(false);
   renderForm();
   const again = q<HTMLButtonElement>('[data-new-payment]');
-  showPop(outcome(paid, b, id, reply, again));
+  showPop(outcome(paid, b, stan, reply, again));
 }
 
-/** The popup for a finished payment: what happened, how much, and the IDs to quote. */
-function outcome(paid: boolean, b: Bill, id: string, reply: { description?: string }, again: HTMLButtonElement): Pop {
-  const done = { label: 'Done', run: () => again.focus() };
-  const another = { label: 'Pay another bill', run: () => again.click() };
-  const ids: [string, string, boolean?][] = [
-    ['Bill reference', b.billReference, true],
-    ['Payment ref', id, true],
-  ];
-  return paid
-    ? {
-        tone: 'ok',
-        kicker: 'Payment successful',
-        title: `Paid to ${b.institution}`,
-        amount: money(b.total, b.currency),
-        facts: [...ids, [`${b.institution} replied`, reply.description || 'SUCCESS'], ['New balance', money(balance)]],
-        primary: done,
-        secondary: another,
-      }
-    : {
-        tone: 'fail',
-        kicker: 'Payment failed',
-        title: `${b.institution} didn't accept the payment`,
-        amount: money(b.total, b.currency),
-        text: 'Nothing was taken from your balance.',
-        facts: [['Reason', reply.description || 'No answer'], ...ids, ['Balance', money(balance)]],
-        primary: done,
-        secondary: another,
-      };
+const day = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const clock = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' });
+
+/** The receipt for a finished payment, paid or not: amount, when, from and to, and the STAN. */
+function outcome(paid: boolean, b: Bill, stan: string, reply: { description?: string }, again: HTMLButtonElement): Pop {
+  const now = new Date();
+  return {
+    tone: paid ? 'ok' : 'fail',
+    kicker: '',
+    title: paid ? 'Transaction Successful' : 'Transaction Failed',
+    amount: money(b.total, b.currency),
+    text: paid ? undefined : `${b.institution}: ${reply.description || 'no answer'}. Nothing was taken from your balance.`,
+    receipt: {
+      when: `${day.format(now)} | ${clock.format(now)}`,
+      from: { name: holder, sub: masked(account.accountNo) },
+      to: { badge: b.institution, name: billerNames[b.institution] ?? b.institution, sub: masked(b.billReference) },
+      stan,
+    },
+    primary: { label: 'Done', run: () => again.focus() },
+    secondary: { label: 'Pay another bill', run: () => again.click() },
+  };
 }
 
 // ── Wiring ────────────────────────────────────────────────────────────
@@ -355,8 +375,6 @@ q('[data-new-payment]').addEventListener('click', () => {
 
 // ── Sign in and out ───────────────────────────────────────────────────
 
-const LOGIN_HINT = loginHint.textContent ?? '';
-
 loginForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const empty = !loginUser.value.trim() ? loginUser : !loginPass.value ? loginPass : null;
@@ -368,6 +386,7 @@ loginForm.addEventListener('submit', (e) => {
   }
   // The phone greets whoever signed in, by the username they typed.
   const user = loginUser.value.trim();
+  holder = accountTitle(user) || user.toUpperCase();
   q('[data-w-hi]').textContent = `Hi, ${user}`;
   q('[data-w-avatar]').textContent = initials(user) || user[0]!.toUpperCase();
   loginPass.value = '';
@@ -388,7 +407,7 @@ function signOut() {
   renderForm();
   loginUser.value = '';
   loginPass.value = '';
-  loginHint.textContent = LOGIN_HINT;
+  loginHint.textContent = '';
   delete loginHint.dataset.error;
   setMode('login');
   loginUser.focus();

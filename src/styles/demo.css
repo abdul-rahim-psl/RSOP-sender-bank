@@ -58,13 +58,6 @@
   padding: var(--page-pad) var(--gutter);
 }
 
-.iso {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  color: var(--faint);
-  white-space: nowrap;
-}
-
 /* ── Lights: a grey bulb until it carries a tone, then a coloured one with its glyph ── */
 
 .light {
@@ -308,7 +301,6 @@
 }
 
 .w-out.icon {
-  margin-left: 4px;
   padding: 6px;
 }
 
@@ -361,12 +353,6 @@
   font-weight: 900;
   line-height: 1.25;
   letter-spacing: -0.01em;
-}
-
-.w-bal-phone {
-  color: var(--ink-2);
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
 }
 
 .w-title {
@@ -457,10 +443,6 @@
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-.b-top .iso {
-  margin-left: auto;
 }
 
 .w-back {
@@ -966,4 +948,152 @@
   .outcome-badge {
     animation: none;
   }
+}
+
+/* ── Receipt: a payment's outcome, laid out like a banking app's transaction receipt ── */
+
+.receipt {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.receipt[hidden] {
+  display: none;
+}
+
+.outcome-card[data-receipt] .outcome-kicker,
+.outcome-card[data-receipt] .outcome-amount {
+  display: none;
+}
+
+.outcome-card[data-receipt] .outcome-title {
+  color: var(--tone);
+  font-size: 1.3rem;
+}
+
+.outcome-card[data-receipt] .outcome-badge {
+  width: 72px;
+  height: 72px;
+}
+
+/* The amount sits on a panel watermarked with the bank's name, as on a printed receipt. */
+.receipt-amount {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 72px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--ink) 5%, var(--screen));
+}
+
+.receipt-wm {
+  position: absolute;
+  inset: -60% -30%;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 0.72rem;
+  font-style: italic;
+  line-height: 1.7;
+  opacity: 0.09;
+  transform: rotate(-14deg);
+  word-spacing: 6px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.receipt-sum {
+  position: relative;
+  color: var(--tone);
+  font-size: 1.9rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.receipt-when {
+  color: var(--mut);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.receipt-rule {
+  width: 100%;
+  margin: 2px 0;
+  border: 0;
+  border-top: 2px dashed var(--stroke-strong);
+}
+
+.receipt-parties {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0 4px;
+  list-style: none;
+  text-align: left;
+}
+
+.receipt-parties li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Initials in a ringed disc stand in for each party's logo. */
+.party-badge {
+  --pc: var(--c-violet);
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 3px solid var(--pc);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--pc) 14%, var(--screen));
+  color: var(--pc);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.party-badge[data-party='biller'] {
+  --pc: var(--c-blue);
+  font-size: 0.66rem;
+}
+
+.party-text {
+  display: grid;
+  min-width: 0;
+}
+
+.party-label {
+  color: var(--mut);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.party-name {
+  overflow: hidden;
+  font-size: 0.95rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.party-sub {
+  color: var(--mut);
+  font-size: 0.78rem;
+}
+
+.receipt-ref {
+  color: var(--mut);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.receipt-ref .mono {
+  color: var(--ink);
+  font-family: var(--font-mono);
 }

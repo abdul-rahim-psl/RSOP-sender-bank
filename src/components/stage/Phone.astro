@@ -39,7 +39,7 @@ import { BILL_REF_LENGTH, institutions } from '../../data/bills';
         <input type="password" autocomplete="current-password" data-login-pass />
       </label>
 
-      <p class="w-hint" id="l-hint" aria-live="polite" data-l-hint>Any username and password will do in this demo.</p>
+      <p class="w-hint" id="l-hint" aria-live="polite" data-l-hint></p>
       <noscript><p class="w-hint">This demo needs JavaScript.</p></noscript>
 
       <button class="send" type="submit" aria-describedby="l-hint">
@@ -64,7 +64,6 @@ import { BILL_REF_LENGTH, institutions } from '../../data/bills';
       <div class="w-bal">
         <p class="w-bal-label">Balance</p>
         <p class="w-bal-value" data-w-balance></p>
-        <p class="w-bal-phone">{account.phone}</p>
       </div>
 
       <p class="w-title">Pay a bill</p>
@@ -117,7 +116,6 @@ import { BILL_REF_LENGTH, institutions } from '../../data/bills';
           <Icon name="back" size={18} />
         </button>
         <p class="w-title">Bill</p>
-        <span class="iso">creditor</span>
         <button class="w-out icon" type="button" aria-label="Log out" data-logout>
           <Icon name="logout" size={15} />
         </button>
@@ -162,6 +160,37 @@ import { BILL_REF_LENGTH, institutions } from '../../data/bills';
         <p class="outcome-title" id="pop-title" data-pop-title></p>
         <p class="outcome-amount" data-pop-amount></p>
         <p class="outcome-text" id="pop-text" data-pop-text></p>
+
+        {/* A payment's receipt: the amount on a watermarked panel, when, from whom to which biller, and the STAN. */}
+        <div class="receipt" data-receipt hidden>
+          <div class="receipt-amount">
+            <span class="receipt-wm" aria-hidden="true">{Array.from({ length: 60 }, () => account.provider).join('   ')}</span>
+            <span class="receipt-sum" data-r-amount></span>
+          </div>
+          <p class="receipt-when" data-r-when></p>
+          <hr class="receipt-rule" />
+          <ul class="receipt-parties">
+            <li>
+              <span class="party-badge" data-party="bank" aria-hidden="true">{initials(account.provider)}</span>
+              <span class="party-text">
+                <span class="party-label">From Account</span>
+                <span class="party-name" data-r-from-name></span>
+                <span class="party-sub mono" data-r-from-sub></span>
+              </span>
+            </li>
+            <li>
+              <span class="party-badge" data-party="biller" aria-hidden="true" data-r-to-badge></span>
+              <span class="party-text">
+                <span class="party-label">To Biller</span>
+                <span class="party-name" data-r-to-name></span>
+                <span class="party-sub mono" data-r-to-sub></span>
+              </span>
+            </li>
+          </ul>
+          <hr class="receipt-rule" />
+          <p class="receipt-ref">Reference Number (STAN): <span class="mono" data-r-ref></span></p>
+        </div>
+
         <dl class="outcome-facts" data-pop-facts></dl>
         <div class="outcome-actions">
           <button class="send" type="button" data-pop-primary></button>

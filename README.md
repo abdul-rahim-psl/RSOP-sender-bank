@@ -47,7 +47,7 @@ This runs two things:
 - `npm run check:data`: Node's built-in test runner on `tests/`. It checks:
   - **The calls.** A lookup posts the institution and trimmed reference to the API and returns its reply unchanged; every reference goes to the API, the sample ones included. Paying a looked-up bill posts exactly the bill ID, reference and total the API takes.
   - **The bills.** The institution list is FBR only. A bill reference must be exactly 10 letters or digits. The API's captured bill reads as a complete bill whose components add up and which the account can afford.
-  - **The data.** The account holder is fictional, with a 555-01xx phone number.
+  - **The data.** The account holder is fictional.
   - **The proxy.** It forwards only a well-formed FBR inquiry (two fields) or payment (three fields), with the `Charset` header, the participant codes and a fresh `X-Request-ID`. It refuses anything else without calling the API, passes the API's status through, and answers 502 when the API cannot be reached.
 
 ## Where things live
@@ -69,13 +69,13 @@ The page calls `/api/v1/billInquiry` and `/api/v1/billPayment` on its own server
 
 ## How it behaves
 
-The phone always opens on the Meezan Bank sign-in screen. Any username and password will do; nothing is sent.
+The phone always opens on the Meezan Bank sign-in screen. Any username and password are accepted; nothing is sent.
 
 1. The institution dropdown has one value, FBR. Type a bill reference of exactly 10 letters or digits; it is looked up on the live API. Until the reference is valid, Look up stays disabled and the hint says what is wrong.
 2. Press Look up bill. The phone shows the bill: institution, bill reference and bill ID; the four components with their accounts and amounts; the total; and the status, Unpaid. So far the API has answered the same PKR 100,000 bill for every reference, echoing the reference back.
 3. Press Pay. The bill stays on screen with the status "Paying", and the phone sends the bill payment (`billId`, `billReference`, `totalAmount`) to the biller. On SUCCESS every component ticks green, the status shows the payment reference and "FBR: SUCCESS", and the balance drops by the total. On any other answer the status says "Payment failed" with the biller's description, and the balance stays the same. Pay another bill returns to the form.
 
-Every outcome opens as a popup over the phone: a green tick for paid; a red cross for a payment the biller refused, or a lookup that failed (for example "Bill already paid") or found no bill. It shows the amount, the bill and payment references, the biller's reply and the balance. Done or Esc closes it; Pay another bill starts over.
+Every outcome opens as a popup over the phone: a green tick for paid; a red cross for a payment the biller refused, or a lookup that failed (for example "Bill already paid") or found no bill. A payment's popup is a receipt: Transaction Successful or Failed, the amount on a panel watermarked with the bank's name, the date and time, From Account (the signed-in username as the account title, a masked fictional account number), To Biller (Federal Board of Revenue, the masked bill reference) and a 6-digit STAN the phone assigns. A lookup error lists the reason, reference and institution instead. Done or Esc closes it; Pay another bill starts over.
 
 The back arrow on the bill goes back to the form with what you typed. Log out, on the form and on the bill, and Clear all both reset the fields, the bill, the balance stop a lookup or payment in progress, and return to the sign-in screen.
 

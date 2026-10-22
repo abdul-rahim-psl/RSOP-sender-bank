@@ -7,8 +7,7 @@ import { BILL_REF_LENGTH, institutions } from '../src/data/bills.ts';
 import { billInquiry, billPayment, billRefProblem, paymentRequest, toBill } from '../src/lib/biller.ts';
 import { endpoints } from '../src/data/api.ts';
 
-test('the account holder is fictional', () => {
-  assert.match(account.phone, /^\+1 555 01\d\d$/, 'use the 555-01xx range kept for fiction');
+test('the account holder has two initials for the avatar', () => {
   assert.equal(initials(account.name).length, 2);
 });
 

@@ -1,11 +1,12 @@
-// The one fictional account holder using the phone. The phone number sits in the 555-0100 to 555-0199 range kept for fiction.
+// The one fictional account holder using the phone.
 
 export const CURRENCY = 'PKR';
 
 export interface Account {
   name: string;
-  phone: string;
   provider: string;
+  /** A fictional account number; receipts show it masked. */
+  accountNo: string;
   /** A party colour token from the RSOP family, for the avatar and balance card. */
   color: string;
   balance: number;
@@ -13,8 +14,8 @@ export interface Account {
 
 export const account: Account = {
   name: 'Bilal Siddiqui',
-  phone: '+1 555 0102',
   provider: 'Meezan Bank',
+  accountNo: '01570103482468',
   color: 'blue',
   balance: 2_500_000,
 };
@@ -27,5 +28,11 @@ export const initials = (name: string) =>
     .slice(0, 2)
     .map((w) => w[0]!.toUpperCase())
     .join('');
+
+/** A receipt's account title from a username: "abdul.rahim" → "ABDUL RAHIM". */
+export const accountTitle = (username: string) => username.trim().split(/[\s._-]+/).filter(Boolean).join(' ').toUpperCase();
+
+/** A number or reference as receipts show it: its first and last four, "0157xxx2468". */
+export const masked = (s: string) => (s.length > 8 ? `${s.slice(0, 4)}xxx${s.slice(-4)}` : s);
 
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name;

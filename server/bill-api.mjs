@@ -54,9 +54,10 @@ export function createBillApi(config = defaults, send = fetch) {
       return refuse(res, 500, 'PROXY NOT CONFIGURED');
 
     const name = req.url.split('/').pop();
+    const paying = req.url === PAYMENT_PATH && Boolean(config.paymentBase);
     const started = Date.now();
     try {
-      const upstream = await send(config.apiBase + req.url, {
+      const upstream = await send((paying ? config.paymentBase : config.apiBase) + req.url, {
         method: 'POST',
         headers: {
           Accept: 'application/json',
@@ -67,6 +68,8 @@ export function createBillApi(config = defaults, send = fetch) {
           'Sender-Participant-Code': config.senderParticipantCode,
           'Sender-User-Code': config.senderUserCode,
           'X-Request-ID': randomUUID().replaceAll('-', ''),
+          // The biller answers 401 without its credential.
+          ...(paying && config.paymentAuthorization ? { Authorization: config.paymentAuthorization } : {}),
         },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(config.timeoutMs),

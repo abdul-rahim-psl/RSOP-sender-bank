@@ -70,7 +70,7 @@ This runs two things:
 | Layout and components | `src/styles/demo.css` |
 | Colour, type and glass tokens, shared with RSOP demo 2 | `src/styles/global.css` |
 
-The page calls `/api/v1/billInquiry` on its own server, and `server/bill-api.mjs` forwards it to `API_BASE`. The browser can't call the API itself: as of 2026-10-21 the API fails CORS preflight, and Chrome won't let the tunnel's public page call a private address. See [docs/plan.md](docs/plan.md#the-proxy). To take the payment live too, give `billPayment()` in `src/lib/biller.ts` the same treatment.
+The page calls `/api/v1/billInquiry` and `/api/v1/billPayment` on its own server, and `server/bill-api.mjs` forwards them: the inquiry to `API_BASE`, the payment to `PAYMENT_BASE_URL` with `PAYMENT_AUTHORIZATION` as its `Authorization` header (or to `API_BASE` when `PAYMENT_BASE_URL` is unset). As of 2026-10-22 the biller answers `401` until that credential is set. The browser can't call the API itself: as of 2026-10-21 the API fails CORS preflight, and Chrome won't let the tunnel's public page call a private address. See [docs/plan.md](docs/plan.md#the-proxy).
 
 ## How it behaves
 

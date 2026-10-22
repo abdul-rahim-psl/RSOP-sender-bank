@@ -72,4 +72,4 @@ http
       else res.writeHead(405).end('Method not allowed');
     });
   })
-  .listen(port, host, () => console.log(`Serving dist/ and the bill API proxy to ${config.apiBase} at http://${host}:${port}`));
+  .listen(port, host, () => console.log(`Serving dist/ and the bill API proxy to ${config.apiBase} (payments: ${config.paymentBase || config.apiBase}) at http://${host}:${port}`));

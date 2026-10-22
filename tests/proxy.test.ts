@@ -110,3 +110,15 @@ test('refuses a malformed payment without calling the API', async () => {
   assert.equal(p.sent.length, 0);
   await p.close();
 });
+
+test('sends a payment to the biller with its credential when a payment address is set, and inquiries still to the API', async () => {
+  const p = await start(ok, { ...config, paymentBase: 'http://biller.test', paymentAuthorization: 'Bearer T' });
+  await p.call({ billId: '12345', billReference: '1234567890', totalAmount: '100000' }, 'POST', '/api/v1/billPayment');
+  await p.call({ institution: 'FBR', billReference: '1234567890' });
+  const [pay, inquiry] = p.sent;
+  assert.equal(pay!.url, 'http://biller.test/api/v1/billPayment');
+  assert.equal((pay!.init.headers as Record<string, string>).Authorization, 'Bearer T');
+  assert.equal(inquiry!.url, 'http://api.test/api/v1/billInquiry');
+  assert.equal((inquiry!.init.headers as Record<string, string>).Authorization, undefined, 'the credential stays with the biller');
+  await p.close();
+});

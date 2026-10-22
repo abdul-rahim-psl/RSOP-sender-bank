@@ -21,6 +21,18 @@ export interface Bill {
 
 type Post = (path: string, body: unknown) => Promise<unknown>;
 
+/** The biller's refusal, keeping its statusCode so the phone can tell an already-paid bill from a failure. */
+export class BillerError extends Error {
+  statusCode?: number;
+  constructor(message: string, statusCode?: number) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
+/** The biller's statusCode for a bill its DB already marks paid. */
+export const ALREADY_PAID = 101;
+
 /** POSTs JSON to the page's own server; throws a short reason when there is no usable reply. */
 export async function postJson(path: string, body: unknown): Promise<unknown> {
   const res = await fetch(path, {
@@ -29,8 +41,12 @@ export async function postJson(path: string, body: unknown): Promise<unknown> {
     body: JSON.stringify(body),
   });
   const data: unknown = await res.json().catch(() => null);
-  const description = (data as { description?: unknown } | null)?.description;
-  if (!res.ok) throw new Error(typeof description === 'string' && description ? description : `HTTP ${res.status}`);
+  const { description, statusCode } = (data ?? {}) as { description?: unknown; statusCode?: unknown };
+  if (!res.ok)
+    throw new BillerError(
+      typeof description === 'string' && description ? description : `HTTP ${res.status}`,
+      typeof statusCode === 'number' ? statusCode : undefined,
+    );
   if (!data || typeof data !== 'object') throw new Error('UNREADABLE REPLY');
   return data;
 }

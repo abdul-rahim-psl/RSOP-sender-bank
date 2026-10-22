@@ -2,7 +2,7 @@
 import Icon from '../Icon.astro';
 import Light from '../Light.astro';
 import { account, initials } from '../../data/account';
-import { BILL_REF_LENGTH, institutions } from '../../data/bills';
+import { BILL_REF_LENGTH, institutions, sampleBills } from '../../data/bills';
 ---
 
 <div class="phone" role="group" aria-label="Sender's phone">
@@ -95,6 +95,18 @@ import { BILL_REF_LENGTH, institutions } from '../../data/bills';
 
       <p class="w-hint" id="w-hint" aria-live="polite" data-w-hint></p>
       <noscript><p class="w-hint">This demo needs JavaScript.</p></noscript>
+
+      <div class="w-samples" role="group" aria-labelledby="w-samples-label">
+        <p class="w-label" id="w-samples-label">Try a bill</p>
+        <div class="w-sample-row">
+          {sampleBills.map((b) => (
+            <button class="w-sample" type="button" data-sample={b.ref} data-tone={b.tone}>
+              <span class="w-sample-ref mono">{b.ref}</span>
+              <span class="w-sample-sub">{b.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <button class="send" type="submit" aria-describedby="w-hint" data-lookup>
         <Icon name="search" size={17} />

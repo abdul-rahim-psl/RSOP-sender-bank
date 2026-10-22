@@ -43,3 +43,9 @@ export const billerNames: Record<string, string> = { FBR: 'Federal Board of Reve
 /** A bill reference is exactly this many letters or digits. */
 export const BILL_REF_LENGTH = 10;
 
+
+/** One-tap references for the demo; whether each is paid comes from the biller's DB, not from here. */
+export const sampleBills = [
+  { ref: '11111AAAAA', label: 'Unpaid bill', tone: 'ok' },
+  { ref: '22222BBBBB', label: 'Paid bill', tone: 'fail' },
+] as const;

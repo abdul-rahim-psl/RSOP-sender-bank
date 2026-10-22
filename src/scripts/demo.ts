@@ -3,7 +3,7 @@
 
 import { account, accountTitle, initials, masked } from '../data/account';
 import { billerNames } from '../data/bills';
-import { billInquiry, billPayment, billRefProblem, paymentRequest, toBill, type Bill } from '../lib/biller';
+import { ALREADY_PAID, BillerError, billInquiry, billPayment, billRefProblem, paymentRequest, toBill, type Bill } from '../lib/biller';
 import { money } from '../lib/format';
 import type { Tone } from '../lib/tone';
 
@@ -239,6 +239,22 @@ async function lookup() {
     setBusy(false);
     setMode('form');
     renderForm();
+    if (e instanceof BillerError && e.statusCode === ALREADY_PAID) {
+      showPop({
+        tone: 'fail',
+        kicker: 'Bill lookup',
+        title: 'Bill already paid',
+        text: `${inst} has bill ${ref} as paid. There is nothing to pay.`,
+        facts: [
+          ['Status', 'Paid'],
+          ['Bill reference', ref, true],
+          ['Institution', inst],
+        ],
+        primary: { label: 'Done' },
+        secondary: { label: 'Change reference', run: changeRef },
+      });
+      return;
+    }
     showPop({
       tone: 'fail',
       kicker: 'Bill lookup',
@@ -346,6 +362,16 @@ form.addEventListener('submit', (e) => {
   }
   void lookup();
 });
+
+// A sample reference fills the field and looks the bill up in one tap.
+qa<HTMLButtonElement>('[data-sample]').forEach((b) =>
+  b.addEventListener('click', () => {
+    if (busy) return;
+    refInput.value = b.dataset.sample!;
+    renderForm();
+    if (check().ok) void lookup();
+  }),
+);
 
 payBtn.addEventListener('click', () => {
   if (busy || !bill) return;

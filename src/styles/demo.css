@@ -434,6 +434,62 @@
   color: var(--fail-ink);
 }
 
+.w-samples {
+  display: grid;
+  gap: 6px;
+}
+
+.w-sample-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+/* Tinted, not filled: the tone marks the outcome without competing with the Look up button. */
+.w-sample {
+  display: grid;
+  gap: 2px;
+  padding: 9px 12px;
+  border: 1px solid color-mix(in srgb, var(--tone, var(--stroke-strong)) 45%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--tone, transparent) 9%, transparent);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.w-sample:hover {
+  background: color-mix(in srgb, var(--tone, transparent) 16%, transparent);
+}
+
+.w-sample:focus-visible {
+  border-color: var(--select);
+  outline: 2px solid var(--select);
+  outline-offset: 1px;
+}
+
+.w-sample-ref {
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.w-sample-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--tone-ink, var(--mut));
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.w-sample-sub::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tone, var(--mut));
+}
+
 /* The bill screen keeps one layout through the payment; its stage decides what shows. */
 .scr-bill {
   gap: 10px;

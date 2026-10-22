@@ -3,15 +3,6 @@ import '../styles/demo.css';
 import Base from '../layouts/Base.astro';
 import AppHeader from '../components/AppHeader.astro';
 import Phone from '../components/stage/Phone.astro';
-import { ALERT_AMOUNT, RAPID_FROM, STOP_AMOUNT } from '../data/network';
-import { money } from '../lib/format';
-
-const how = [
-  { when: `Under ${money(ALERT_AMOUNT)}`, then: 'No alert' },
-  { when: `${money(ALERT_AMOUNT)} to ${money(STOP_AMOUNT - 0.01)}`, then: 'Alert raised; still paid' },
-  { when: `${money(STOP_AMOUNT)} or more`, then: 'Stopped by a typology' },
-  { when: `The account's payment no. ${RAPID_FROM} or later`, then: 'Counts one level higher' },
-];
 ---
 
 <Base title="Sender-initiated payment">
@@ -20,27 +11,6 @@ const how = [
     <h1 class="sr-only">Sender-initiated payment: look up a bill on the phone and pay it</h1>
     <Phone />
   </main>
-
-  <div id="how" class="pop glass" popover>
-    <p class="seclabel">Mock screening</p>
-    <h2>How it decides</h2>
-    <table class="how">
-      <tbody>
-        {
-          how.map((h) => (
-            <tr>
-              <th scope="row">{h.when}</th>
-              <td>{h.then}</td>
-            </tr>
-          ))
-        }
-      </tbody>
-    </table>
-    <p class="how-note">
-      The screening rules are invented for the demo. Bill lookups and payments go to RSOP's live API; the bill inquiry has answered
-      {money(100_000)} for every reference so far, so alerts come from the third-payment rule. Clear all resets the payment count.
-    </p>
-  </div>
 </Base>
 
 <script>

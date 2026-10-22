@@ -1,15 +1,14 @@
-// Look up a bill from the phone, pay it, then play the payment along the path through screening to the biller.
+// Sign in on the phone, look up a bill and pay it; the outcome of each lookup and payment opens as a popup.
 // Everything visible is rendered at build time; this script only flips data-* state, fills in text and clones row templates.
 
-import { rules, typologies } from '../data/network';
 import { account, initials } from '../data/account';
 import { institutions } from '../data/bills';
 import { billInquiry, billPayment, billRefProblem, paymentRequest, toBill, type Bill } from '../lib/biller';
 import { money } from '../lib/format';
-import { hash, screen, type Screening, type Tone } from '../lib/screen';
+import type { Tone } from '../lib/tone';
 
 type Mode = 'login' | 'form' | 'busy' | 'bill';
-type Stage = 'open' | 'paying' | 'paid' | 'alert' | 'stopped' | 'failed';
+type Stage = 'open' | 'paying' | 'paid' | 'failed';
 
 const q = <T extends Element = HTMLElement>(sel: string, root: ParentNode = document) => root.querySelector<T>(sel)!;
 const qa = <T extends Element = HTMLElement>(sel: string, root: ParentNode = document) => [...root.querySelectorAll<T>(sel)];
@@ -32,16 +31,17 @@ const lineTpl = q<HTMLTemplateElement>('[data-b-line-tpl]');
 const status = q('[data-b-status]');
 const payBtn = q<HTMLButtonElement>('[data-pay]');
 const bHint = q('[data-b-hint]');
-const dots = qa('[data-dot]');
-const gate = Number(q('[data-path]').dataset.gate);
+const pop = q('[data-pop]');
+const popCard = q('[data-pop-card]');
+const popFacts = q('[data-pop-facts]');
+const popPrimary = q<HTMLButtonElement>('[data-pop-primary]');
+const popSecondary = q<HTMLButtonElement>('[data-pop-secondary]');
 
 let balance = account.balance;
 let bill: Bill | null = null;
 let busy = false;
 /** Bumped by Clear all, so a lookup or replay in progress stops at its next step. */
 let run = 0;
-let seq = 0;
-let sends = 0;
 
 function setTone(el: Element, tone: Tone | null) {
   const light = el.matches('.light') ? el : q('.light', el);
@@ -58,6 +58,74 @@ function setBusy(on: boolean) {
   if (on) demo.dataset.busy = 'true';
   else delete demo.dataset.busy;
 }
+
+// ── Outcome popup ─────────────────────────────────────────────────────
+
+type PopTone = 'ok' | 'fail';
+interface PopAction {
+  label: string;
+  run?: () => void;
+}
+interface Pop {
+  tone: PopTone;
+  kicker: string;
+  title: string;
+  amount?: string;
+  text?: string;
+  /** Label, value, and whether the value is an ID set in mono. */
+  facts?: [string, string, boolean?][];
+  primary: PopAction;
+  secondary?: PopAction;
+}
+
+let onClose: (() => void) | undefined;
+
+/** Shows a lookup's or a payment's outcome over the phone; the screens behind it can't be reached until it closes. */
+function showPop(o: Pop) {
+  popCard.dataset.tone = o.tone;
+  q('[data-pop-kicker]').textContent = o.kicker;
+  q('[data-pop-title]').textContent = o.title;
+  q('[data-pop-amount]').textContent = o.amount ?? '';
+  q('[data-pop-text]').textContent = o.text ?? '';
+  popFacts.replaceChildren(
+    ...(o.facts ?? []).map(([label, value, mono]) => {
+      const row = document.createElement('div');
+      const dt = document.createElement('dt');
+      const dd = document.createElement('dd');
+      dt.textContent = label;
+      dd.textContent = value;
+      if (mono) dd.className = 'mono';
+      row.append(dt, dd);
+      return row;
+    }),
+  );
+  popPrimary.textContent = o.primary.label;
+  popPrimary.onclick = () => closePop(o.primary.run);
+  popSecondary.hidden = !o.secondary;
+  popSecondary.textContent = o.secondary?.label ?? '';
+  popSecondary.onclick = () => closePop(o.secondary?.run);
+  onClose = o.primary.run;
+  qa('.scr').forEach((el) => (el.inert = true));
+  pop.hidden = false;
+  popPrimary.focus();
+}
+
+function closePop(then?: () => void) {
+  if (pop.hidden) return;
+  pop.hidden = true;
+  qa('.scr').forEach((el) => (el.inert = false));
+  onClose = undefined;
+  then?.();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !pop.hidden) closePop(onClose);
+});
+
+const changeRef = () => {
+  refInput.focus();
+  refInput.select();
+};
 
 // ── Inquiry form ──────────────────────────────────────────────────────
 
@@ -91,10 +159,8 @@ function tick() {
 
 const STATUS: Record<Stage, { tone: Tone; line: Tone | null; word: string; title: string }> = {
   open: { tone: 'wait', line: null, word: 'unpaid', title: 'Unpaid' },
-  paying: { tone: 'info', line: null, word: 'unpaid', title: 'Payment in screening' },
+  paying: { tone: 'info', line: null, word: 'unpaid', title: 'Paying' },
   paid: { tone: 'ok', line: 'ok', word: 'paid', title: 'Paid' },
-  alert: { tone: 'warn', line: 'ok', word: 'paid', title: 'Paid, with an alert for review' },
-  stopped: { tone: 'fail', line: 'fail', word: 'not paid', title: 'Not paid: stopped at screening' },
   failed: { tone: 'fail', line: 'fail', word: 'not paid', title: 'Payment failed' },
 };
 
@@ -129,35 +195,8 @@ function renderBill(b: Bill, stage: Stage, sub = '') {
   payBtn.setAttribute('aria-disabled', String(short));
 }
 
-// ── Path ──────────────────────────────────────────────────────────────
-
-function resetPath() {
-  dots.forEach((d) => d.removeAttribute('data-tone'));
-}
-
 /** Waits, then says whether this run is still the current one (Clear all bumps it). */
 const alive = async (ms: number, token: number) => (await sleep(ms), token === run);
-
-/** Lights the dots up to the screening gate and holds there; false when Clear all cut it short. */
-async function toGate(token: number) {
-  for (let i = 0; i < gate; i++) {
-    dots[i]!.dataset.tone = 'info';
-    if (!(await alive(110, token))) return false;
-  }
-  dots[gate]!.dataset.tone = 'wait';
-  q('[data-b-status-sub]').textContent = 'Screening the payment…';
-  return alive(1400, token);
-}
-
-/** Past the gate: green to the biller when it accepted, or red on the last dot when it refused. */
-async function toBiller(accepted: boolean, token: number) {
-  dots.slice(0, gate + 1).forEach((d) => (d.dataset.tone = 'ok'));
-  for (let i = gate + 1; i < dots.length; i++) {
-    dots[i]!.dataset.tone = accepted || i < dots.length - 1 ? 'ok' : 'fail';
-    if (!(await alive(110, token))) return false;
-  }
-  return true;
-}
 
 // ── Lookup and payment ────────────────────────────────────────────────
 
@@ -177,9 +216,18 @@ async function lookup() {
     setBusy(false);
     setMode('form');
     renderForm();
-    hint.textContent = `Couldn't look the bill up (${(e as Error).message}). Try again.`;
-    hint.dataset.error = 'true';
-    lookupBtn.focus();
+    showPop({
+      tone: 'fail',
+      kicker: 'Bill lookup',
+      title: "Couldn't look up the bill",
+      text: `${inst} didn't return bill ${ref}.`,
+      facts: [
+        ['Reason', (e as Error).message],
+        ['Bill reference', ref, true],
+        ['Institution', inst],
+      ],
+      primary: { label: 'Change reference', run: changeRef },
+    });
     return;
   }
   if (token !== run) return;
@@ -189,13 +237,20 @@ async function lookup() {
   if (!found) {
     setMode('form');
     renderForm();
-    hint.textContent = `No bill found for reference ${ref}.`;
-    hint.dataset.error = 'true';
-    refInput.focus();
+    showPop({
+      tone: 'fail',
+      kicker: 'Bill lookup',
+      title: 'No bill found',
+      text: `No bill at ${inst} matches this reference.`,
+      facts: [
+        ['Bill reference', ref, true],
+        ['Institution', inst],
+      ],
+      primary: { label: 'Change reference', run: changeRef },
+    });
     return;
   }
   bill = found;
-  resetPath();
   renderBill(bill, 'open');
   setMode('bill');
   payBtn.focus();
@@ -205,44 +260,56 @@ async function pay() {
   const b = bill!;
   const token = ++run;
   setBusy(true);
+  const id = `TX-${Math.floor(Math.random() * 0x1000000).toString(16).toUpperCase().padStart(6, '0')}`;
+  renderBill(b, 'paying', `Sending ${money(b.total, b.currency)} to ${b.institution}…`);
 
-  const id = `TX-${(hash(`${Date.now()}|${++seq}`) & 0xffffff).toString(16).toUpperCase().padStart(6, '0')}`;
-  const res: Screening = screen(rules, typologies, { id, amount: b.total, priorSends: sends++ });
-
-  resetPath();
-  renderBill(b, 'paying', `${money(b.total, b.currency)} on its way to ${b.institution}`);
-  if (!(await toGate(token))) return;
-
-  // Only a payment that clears screening is sent to the biller.
-  let stage: Stage;
-  let sub: string;
-  if (!res.delivered) {
-    dots[gate]!.dataset.tone = 'fail';
-    stage = 'stopped';
-    sub = `Ref ${id} · balance unchanged`;
-  } else {
-    q('[data-b-status-sub]').textContent = `Sending the payment to ${b.institution}…`;
-    const [reply] = await Promise.all([
-      billPayment(paymentRequest(b)).catch((e: Error) => ({ statusCode: -1, description: e.message })),
-      sleep(600),
-    ]);
-    if (token !== run) return;
-    const accepted = reply.statusCode === 0;
-    if (!(await toBiller(accepted, token))) return;
-    if (accepted) {
-      balance = Math.round((balance - b.total) * 100) / 100;
-      stage = res.adjudicator === 'ALRT' ? 'alert' : 'paid';
-      sub = `Ref ${id} · ${b.institution}: ${reply.description}`;
-    } else {
-      stage = 'failed';
-      sub = `${b.institution}: ${reply.description || 'no answer'} · balance unchanged`;
-    }
-  }
-  renderBill(b, stage, sub);
+  const [reply] = await Promise.all([
+    billPayment(paymentRequest(b)).catch((e: Error) => ({ statusCode: -1, description: e.message })),
+    sleep(600),
+  ]);
+  if (!(await alive(0, token))) return;
+  const paid = reply.statusCode === 0;
+  if (paid) balance = Math.round((balance - b.total) * 100) / 100;
+  renderBill(
+    b,
+    paid ? 'paid' : 'failed',
+    paid ? `Ref ${id} · ${b.institution}: ${reply.description}` : `${b.institution}: ${reply.description || 'no answer'} · balance unchanged`,
+  );
 
   setBusy(false);
   renderForm();
-  q<HTMLButtonElement>('[data-new-payment]').focus();
+  const again = q<HTMLButtonElement>('[data-new-payment]');
+  showPop(outcome(paid, b, id, reply, again));
+}
+
+/** The popup for a finished payment: what happened, how much, and the IDs to quote. */
+function outcome(paid: boolean, b: Bill, id: string, reply: { description?: string }, again: HTMLButtonElement): Pop {
+  const done = { label: 'Done', run: () => again.focus() };
+  const another = { label: 'Pay another bill', run: () => again.click() };
+  const ids: [string, string, boolean?][] = [
+    ['Bill reference', b.billReference, true],
+    ['Payment ref', id, true],
+  ];
+  return paid
+    ? {
+        tone: 'ok',
+        kicker: 'Payment successful',
+        title: `Paid to ${b.institution}`,
+        amount: money(b.total, b.currency),
+        facts: [...ids, [`${b.institution} replied`, reply.description || 'SUCCESS'], ['New balance', money(balance)]],
+        primary: done,
+        secondary: another,
+      }
+    : {
+        tone: 'fail',
+        kicker: 'Payment failed',
+        title: `${b.institution} didn't accept the payment`,
+        amount: money(b.total, b.currency),
+        text: 'Nothing was taken from your balance.',
+        facts: [['Reason', reply.description || 'No answer'], ...ids, ['Balance', money(balance)]],
+        primary: done,
+        secondary: another,
+      };
 }
 
 // ── Wiring ────────────────────────────────────────────────────────────
@@ -322,14 +389,13 @@ loginForm.addEventListener('submit', (e) => {
 
 /** Logging out and Clear all both end every run, reset the account and go back to the sign-in screen. */
 function signOut() {
+  closePop();
   run++;
   setBusy(false);
   balance = account.balance;
   bill = null;
-  sends = 0;
   instInput.selectedIndex = 0;
   refInput.value = '';
-  resetPath();
   renderForm();
   loginUser.value = '';
   loginPass.value = '';

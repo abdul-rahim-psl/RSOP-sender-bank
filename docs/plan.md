@@ -12,20 +12,19 @@
 - [What changes from the reference screen](#what-changes-from-the-reference-screen)
 - [Layout](#layout)
 - [How a payment plays out](#how-a-payment-plays-out)
-- [Mock screening](#mock-screening)
 - [Stack](#stack)
 - [Quality checks](#quality-checks)
 - [Decisions applied](#decisions-applied)
 
 ## Goal
 
-A one-screen, clickable demo of a sender-initiated bill payment. The phone is the whole page, centred and as tall as the window. On it, the account holder picks the institution (FBR), enters a 10-character bill reference, looks the bill up and pays it. The bill shows its component accounts; while paying, a message path shows the payment pass through screening before it reaches the biller, and each account then shows paid or not paid. Bill lookups and payments go to RSOP's live API through a proxy on the demo's own server; the account balance and the screening are mock.
+A one-screen, clickable demo of a sender-initiated bill payment. The phone is the whole page, centred and as tall as the window. On it, the account holder picks the institution (FBR), enters a 10-character bill reference, looks the bill up and pays it. The bill shows its component accounts, and each account shows paid or not paid once the payment is done. Bill lookups and payments go to RSOP's live API through a proxy on the demo's own server; the account balance is mock.
 
 ## Source and content rules
 
 | Source | Used for |
 |---|---|
-| [pics/UI for sender.png](../pics/UI%20for%20sender.png) | The phone, the nine message dots, and the rule and typology numbers the mock screening uses |
+| [pics/UI for sender.png](../pics/UI%20for%20sender.png) | The phone and its bill-payment flow |
 | RSOP's `POST /api/v1/billInquiry` and `POST /api/v1/billPayment` | The phone's two inputs, the bill's shape, and what Pay sends; see [Bill inquiry and payment](#bill-inquiry-and-payment) |
 | `RSOP demo 2/` | Development rules, stack, tokens, fonts, theme toggle, header, popover and status conventions |
 
@@ -33,7 +32,6 @@ A one-screen, clickable demo of a sender-initiated bill payment. The phone is th
 2. **The phone's input rules.** Institution is a dropdown with one value, FBR. A bill reference is exactly 10 letters or digits; Look up stays disabled until it is. The API itself enforces neither rule; see [The API](#the-api).
 3. **No product branding.** No logo, product name, version, tenant or account address from the reference screen. Participant codes from the API's headers are not shown.
 4. **Fictional data only.** The account holder is invented. Phone numbers use the 555-01xx range set aside for fiction.
-5. **Mock outcomes are labelled as mock.** The screening outcomes come from invented rules of thumb, not from real rule or typology logic. The header's Mock data label and How it decides say so.
 
 ## Bill inquiry and payment
 
@@ -88,7 +86,7 @@ Sender-Participant-Code, Receiver-Participant-Code, Sender-User-Code, X-Request-
 ```
 
 - The body carries the bill ID, the bill reference and the total from the inquiry, all as strings.
-- Pay sends it only after the payment clears screening. A payment stopped at screening never reaches the biller.
+- Pay sends it straight away.
 - `statusCode` 0 means paid. Any other code, or no answer, ends in "Payment failed" with the biller's description, and the balance is unchanged. Only SUCCESS has been seen so far.
 - Pay sends it live through the proxy below.
 
@@ -116,7 +114,7 @@ Verified on 2026-10-22 at about 00:00 PKT against a stand-in API on this laptop,
 | Bill inquiry, any reference | The same bill: ID 12345, PKR 100,000, four components, the reference echoed |
 | Bill payment | `{"statusCode":0,"description":"SUCCESS"}` |
 
-With every bill at PKR 100,000, payments alert only from the account's third payment onward, and none is stopped at screening. A lookup reply whose `statusCode` is not 0 shows "No bill found" on the phone; a payment reply whose `statusCode` is not 0 shows "Payment failed". The live API has produced neither.
+A lookup reply whose `statusCode` is not 0 shows "No bill found" on the phone; a payment reply whose `statusCode` is not 0 shows "Payment failed". The live API has produced neither.
 
 ## What changes from the reference screen
 
@@ -126,7 +124,7 @@ With every bill at PKR 100,000, payments alert only from the account's third pay
 | Debtors list | Removed; one account holder owns the phone |
 | Creditors list and creditor phone | Replaced by the bill on the phone: its component accounts and whether each was paid |
 | A Send button and nothing else on the phone | Institution and bill reference, Look up bill, the bill, then Pay |
-| Event director, Rules, Typologies and Alerts panels | Removed; the path and the bill's status on the phone show the outcome |
+| Event director, Rules, Typologies and Alerts panels | Removed; the bill's status and the outcome popup show the result |
 | Nine dots between the two phones | On the phone, under the bill's status, from Pay onwards |
 | Product logo, version, account email and tenant | Removed; RSOP-style brand mark, "Mock data" pill and theme toggle instead |
 | Clear All, Logout | Clear all kept; Logout dropped, as there is no sign-in |
@@ -138,29 +136,14 @@ With every bill at PKR 100,000, payments alert only from the account's third pay
 - **Short windows.** At 880px tall and under the rows tighten; at 740px and under the bill rows shrink and the path labels hide. A whole bill fits without scrolling down to a 560px-tall phone; below that the page scrolls.
 - **Phone widths.** At 520px wide and under the window is the phone: no frame, no fake status bar, and the page scrolls with no sideways scroll.
 
-The phone has three screens: the bill form, a busy screen while looking up, and the bill, which stays on screen through the payment. The bill's stage (unpaid, in screening, paid, paid with an alert, stopped) decides its lights, its status and which button shows.
+The phone has three screens: the bill form, a busy screen while looking up, and the bill, which stays on screen through the payment. The bill's stage (unpaid, paying, paid, failed) decides its lights, its status and which button shows.
 
 ## How a payment plays out
 
 1. Pick the institution, FBR, and enter a 10-character bill reference, or tap one of the three sample references.
 2. Press Look up bill. The phone shows the bill: institution, bill reference and bill ID, the four components with their accounts, the total, and the status Unpaid.
-3. Press Pay. The status changes to "Payment in screening", and the dots under it light up to the middle one, which stands for screening.
-4. The payment pauses at the screening dot.
-5. If something interdicts, the trail stops red at screening, each component shows not paid, and the status says the payment was stopped. The biller is never called.
-6. Otherwise the phone sends the bill payment to the biller ("Sending the payment to FBR…"). On SUCCESS the dots carry on to the biller, each component ticks green, the status shows the payment reference and the biller's answer, and the balance drops by the total. On any other answer the last dot turns red and the status says "Payment failed" with the biller's description.
-
-## Mock screening
-
-Invented for the demo:
-
-| Signal | Effect |
-|---|---|
-| Bill total under PKR 250,000 | No alert; at most one rule hits |
-| Bill total from PKR 250,000 to 999,999.99 | One typology reaches the alert threshold; the bill is still paid |
-| Bill total of PKR 1,000,000 or more | One typology reaches the interdiction threshold; the payment is stopped |
-| The account's third payment or later since Clear all | Counts one level higher |
-
-Each rule hit adds 100 to every typology that uses the rule. A typology alerts at 200 and interdicts at 400. Which rules hit is decided by a hash of the payment, so the same payment always screens the same way. The rules and typologies are not drawn on screen; only the outcome is.
+3. Press Pay. The status changes to "Paying", and the phone sends the bill payment to the biller.
+4. On SUCCESS each component ticks green, the balance drops by the total, and a popup shows the amount, the payment reference and the biller's answer. On any other answer the popup says "Payment failed" with the biller's description, and the balance stays the same.
 
 ## Stack
 
@@ -172,8 +155,7 @@ As in RSOP demo 2: Astro 7.3 with static output, plus a dependency-free Node ser
 |---|---|
 | Builds cleanly | `npm run build` |
 | The calls match the API | `npm run check` checks what the page posts for a lookup and a payment, and what the proxy forwards: path, headers and fields |
-| Data is sound | Rule and typology numbers are unique and three digits; every rule is used by a typology; every typology can reach interdiction; the API's bill adds up |
-| Mock screening keeps its promises | `npm run check` runs every row of the table in [Mock screening](#mock-screening) |
+| Data is sound | The API's bill adds up |
 | Looks right | Screenshots in both themes, before a lookup, on the bill and after each outcome; a fit check at 15 window sizes that every phone screen fits without inner scrolling |
 | Accessible | axe-core in both themes; keyboard-only lookup and payment |
 
@@ -189,10 +171,8 @@ As in RSOP demo 2: Astro 7.3 with static output, plus a dependency-free Node ser
 | Where the bill comes from | RSOP's live API through a proxy on the demo's server, for every reference | Confirmed 2026-10-22 |
 | How Pay reaches billPayment | RSOP's live API, through the same proxy | Confirmed 2026-10-22 |
 | API address | `API_BASE` in `.env`: `192.168.9.15:9991` | Confirmed 2026-10-22 |
-| When Pay calls billPayment | Only after screening passes | Confirmed 2026-10-21 |
+| When Pay calls billPayment | Straight away; there is no screening step | Confirmed 2026-10-22 |
 | A billPayment answer other than SUCCESS | "Payment failed" with the biller's description; balance unchanged | Unconfirmed |
 | Institution | A dropdown with FBR only | Confirmed 2026-10-21 |
 | Bill reference | Exactly 10 letters or digits | Confirmed 2026-10-21 |
-| Screening bands | Alert from PKR 250,000; stopped from PKR 1,000,000 | Unconfirmed |
 | Paying the same bill twice | Allowed by the phone | Unconfirmed |
-| Where screening happens in the path | At the middle dot, before the biller | Unconfirmed |

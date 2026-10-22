@@ -1,7 +1,6 @@
 ---
 import Icon from '../Icon.astro';
 import Light from '../Light.astro';
-import Path from './Path.astro';
 import { account, initials } from '../../data/account';
 import { BILL_REF_LENGTH, institutions, sampleRefs } from '../../data/bills';
 ---
@@ -128,7 +127,7 @@ import { BILL_REF_LENGTH, institutions, sampleRefs } from '../../data/bills';
       <p class="s-step">Asking the biller</p>
     </div>
 
-    {/* One bill screen through the whole payment: unpaid, in screening, then paid or stopped. */}
+    {/* One bill screen through the whole payment: unpaid, paying, then paid or failed. */}
     <div class="scr scr-bill" data-scr="bill" data-stage="open">
       <div class="b-top">
         <button class="w-back" type="button" aria-label="Change bill" data-back>
@@ -160,8 +159,6 @@ import { BILL_REF_LENGTH, institutions, sampleRefs } from '../../data/bills';
         </span>
       </div>
 
-      <Path />
-
       <p class="w-hint" id="b-hint" data-b-hint></p>
 
       <button class="send b-pay" type="button" aria-describedby="b-hint" data-pay>
@@ -169,6 +166,25 @@ import { BILL_REF_LENGTH, institutions, sampleRefs } from '../../data/bills';
         <span data-pay-label>Pay</span>
       </button>
       <button class="send ghost b-again" type="button" data-new-payment>Pay another bill</button>
+    </div>
+
+    {/* The outcome of a lookup or a payment, over whichever screen asked; demo.ts fills and opens it. */}
+    <div class="outcome" data-pop hidden>
+      <div class="outcome-card" role="alertdialog" aria-modal="true" aria-labelledby="pop-title" aria-describedby="pop-text" data-pop-card>
+        <span class="outcome-badge" aria-hidden="true">
+          <span class="outcome-icon" data-for="ok"><Icon name="check" size={30} /></span>
+          <span class="outcome-icon" data-for="fail"><Icon name="x" size={28} /></span>
+        </span>
+        <p class="outcome-kicker" data-pop-kicker></p>
+        <p class="outcome-title" id="pop-title" data-pop-title></p>
+        <p class="outcome-amount" data-pop-amount></p>
+        <p class="outcome-text" id="pop-text" data-pop-text></p>
+        <dl class="outcome-facts" data-pop-facts></dl>
+        <div class="outcome-actions">
+          <button class="send" type="button" data-pop-primary></button>
+          <button class="send ghost" type="button" data-pop-secondary></button>
+        </div>
+      </div>
     </div>
   </div>
 </div>

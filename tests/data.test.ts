@@ -1,36 +1,11 @@
-// The rule and typology lists and the fictional parties stay well formed.
+// The fictional account, the bill data and the API client stay well formed.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { INTERDICT_AT, HIT_WEIGHT, rules, typologies } from '../src/data/network.ts';
 import { account, initials } from '../src/data/account.ts';
 import { BILL_REF_LENGTH, institutions, sampleRefs } from '../src/data/bills.ts';
-import { band } from '../src/lib/screen.ts';
 import { billInquiry, billPayment, billRefProblem, paymentRequest, toBill } from '../src/lib/biller.ts';
 import { endpoints } from '../src/data/api.ts';
-
-const unique = (xs: string[]) => new Set(xs).size === xs.length;
-
-test('rule and typology numbers are unique, three digits, and in the reference order', () => {
-  const ids = typologies.map((t) => t.id);
-  for (const list of [rules, ids]) {
-    assert.ok(unique(list));
-    for (const id of list) assert.match(id, /^\d{3}$/);
-    assert.deepEqual(list, [...list].sort());
-  }
-  assert.equal(rules.length, 33);
-  assert.equal(ids.length, 31);
-});
-
-test('every rule is used by a typology, and every typology can reach interdiction', () => {
-  const used = new Set(typologies.flatMap((t) => t.rules));
-  for (const r of rules) assert.ok(used.has(r), `rule ${r} is unused`);
-  for (const t of typologies) {
-    assert.ok(unique(t.rules), `typology ${t.id} repeats a rule`);
-    for (const r of t.rules) assert.ok(rules.includes(r));
-    assert.ok(t.rules.length * HIT_WEIGHT >= INTERDICT_AT, `typology ${t.id} can never interdict`);
-  }
-});
 
 test('the account holder is fictional', () => {
   assert.match(account.phone, /^\+1 555 01\d\d$/, 'use the 555-01xx range kept for fiction');
@@ -78,7 +53,6 @@ test("the API's bill reads as a complete bill the account can pay", () => {
   assert.equal(bill.components.length, 4);
   assert.equal(bill.components.reduce((a, c) => a + c.amount, 0), bill.total);
   assert.ok(bill.total <= account.balance);
-  assert.equal(band(bill.total), 0, 'on its own it raises no alert');
 });
 
 test('a bill reference is exactly 10 letters or digits', () => {

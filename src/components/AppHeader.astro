@@ -8,14 +8,6 @@ import ThemeToggle from './ThemeToggle.astro';
   <Brand />
 
   <div class="tools">
-    <span class="mock" title="Bill lookups and payments use RSOP's live API; the account balance and screening are mock">
-      <Icon name="flag" size={14} />
-      <span>Mock screening</span>
-    </span>
-    <button class="btn tool" type="button" aria-label="How it decides" popovertarget="how">
-      <Icon name="info" size={16} />
-      <span class="tool-word">How it decides</span>
-    </button>
     <button class="btn tool" type="button" aria-label="Clear all" data-clear-all>
       <Icon name="retry" size={16} />
       <span class="tool-word">Clear all</span>
@@ -47,29 +39,9 @@ import ThemeToggle from './ThemeToggle.astro';
     margin-left: auto;
   }
 
-  .mock {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 11px;
-    border: 1px dashed color-mix(in srgb, var(--wait) 60%, transparent);
-    border-radius: 999px;
-    color: var(--wait-ink);
-    font-size: 0.74rem;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-  }
-
   .tool {
     min-height: 36px;
     padding: 6px 14px;
-  }
-
-  @media (max-width: 560px) {
-    .mock {
-      display: none;
-    }
   }
 
   /* On phones the buttons keep their icons and accessible names. */

@@ -227,6 +227,7 @@
   scrollbar-width: thin;
 }
 
+.screen[data-screen='login'] .scr-login,
 .screen[data-screen='form'] .scr-form,
 .screen[data-screen='busy'] .scr-busy,
 .screen[data-screen='bill'] .scr-bill {
@@ -263,7 +264,65 @@
   --pc: inherit;
 }
 
+.scr-login {
+  justify-content: center;
+}
+
+.l-brand {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.l-brand .avatar {
+  width: 52px;
+  height: 52px;
+  margin-bottom: 6px;
+  font-size: 1rem;
+}
+
+.scr-login .send {
+  margin-top: 6px;
+}
+
+/* Log out sits at the right of each signed-in screen's top row. */
+.w-out {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 6px 10px;
+  border: 1px solid var(--stroke-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.w-out:hover {
+  background: var(--hover);
+}
+
+.w-out.icon {
+  margin-left: 4px;
+  padding: 6px;
+}
+
+.w-who {
+  min-width: 0;
+}
+
+/* A long username ends in an ellipsis rather than pushing Log out off the screen. */
 .w-hi {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 1rem;
   font-weight: 900;
   line-height: 1.2;

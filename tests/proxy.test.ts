@@ -8,6 +8,8 @@ import { createBillApi } from '../server/bill-api.mjs';
 
 const config = {
   apiBase: 'http://api.test',
+  paymentBase: '',
+  paymentAuthorization: '',
   senderParticipantCode: 'SENDER',
   receiverParticipantCode: 'RECEIVER',
   senderUserCode: 'USER',

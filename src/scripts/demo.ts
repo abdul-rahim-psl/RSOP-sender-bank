@@ -2,13 +2,13 @@
 // Everything visible is rendered at build time; this script only flips data-* state, fills in text and clones row templates.
 
 import { rules, typologies } from '../data/network';
-import { account } from '../data/account';
+import { account, initials } from '../data/account';
 import { institutions } from '../data/bills';
 import { billInquiry, billPayment, billRefProblem, paymentRequest, toBill, type Bill } from '../lib/biller';
 import { money } from '../lib/format';
 import { hash, screen, type Screening, type Tone } from '../lib/screen';
 
-type Mode = 'form' | 'busy' | 'bill';
+type Mode = 'login' | 'form' | 'busy' | 'bill';
 type Stage = 'open' | 'paying' | 'paid' | 'alert' | 'stopped' | 'failed';
 
 const q = <T extends Element = HTMLElement>(sel: string, root: ParentNode = document) => root.querySelector<T>(sel)!;
@@ -17,6 +17,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const demo = q('[data-demo]');
 const screenEl = q('[data-screen]');
+const loginForm = q<HTMLFormElement>('[data-login-form]');
+const loginUser = q<HTMLInputElement>('[data-login-user]');
+const loginPass = q<HTMLInputElement>('[data-login-pass]');
+const loginHint = q('[data-l-hint]');
 const form = q<HTMLFormElement>('[data-inquiry-form]');
 const instInput = q<HTMLSelectElement>('[data-institution]');
 const refInput = q<HTMLInputElement>('[data-bill-ref]');
@@ -293,7 +297,31 @@ q('[data-new-payment]').addEventListener('click', () => {
   refInput.focus();
 });
 
-q('[data-clear-all]').addEventListener('click', () => {
+// ── Sign in and out ───────────────────────────────────────────────────
+
+const LOGIN_HINT = loginHint.textContent ?? '';
+
+loginForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const empty = !loginUser.value.trim() ? loginUser : !loginPass.value ? loginPass : null;
+  if (empty) {
+    loginHint.textContent = empty === loginUser ? 'Enter your username.' : 'Enter your password.';
+    loginHint.dataset.error = '';
+    empty.focus();
+    return;
+  }
+  // The phone greets whoever signed in, by the username they typed.
+  const user = loginUser.value.trim();
+  q('[data-w-hi]').textContent = `Hi, ${user}`;
+  q('[data-w-avatar]').textContent = initials(user) || user[0]!.toUpperCase();
+  loginPass.value = '';
+  setMode('form');
+  renderForm();
+  refInput.focus();
+});
+
+/** Logging out and Clear all both end every run, reset the account and go back to the sign-in screen. */
+function signOut() {
   run++;
   setBusy(false);
   balance = account.balance;
@@ -302,9 +330,17 @@ q('[data-clear-all]').addEventListener('click', () => {
   instInput.selectedIndex = 0;
   refInput.value = '';
   resetPath();
-  setMode('form');
   renderForm();
-});
+  loginUser.value = '';
+  loginPass.value = '';
+  loginHint.textContent = LOGIN_HINT;
+  delete loginHint.dataset.error;
+  setMode('login');
+  loginUser.focus();
+}
+
+qa('[data-logout]').forEach((b) => b.addEventListener('click', signOut));
+q('[data-clear-all]').addEventListener('click', signOut);
 
 tick();
 setInterval(tick, 20_000);

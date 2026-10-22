@@ -14,14 +14,15 @@ export interface Account {
 export const account: Account = {
   name: 'Bilal Siddiqui',
   phone: '+1 555 0102',
-  provider: 'Lakeside Bank',
+  provider: 'Meezan Bank',
   color: 'blue',
   balance: 2_500_000,
 };
 
+/** "Bilal Siddiqui" → "BS"; a username splits on dots, dashes and underscores too: "abdul.rahim" → "AR". */
 export const initials = (name: string) =>
   name
-    .split(/\s+/)
+    .split(/[\s._-]+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((w) => w[0]!.toUpperCase())

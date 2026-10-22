@@ -74,6 +74,8 @@ The page calls `/api/v1/billInquiry` and `/api/v1/billPayment` on its own server
 
 ## How it behaves
 
+The phone always opens on the Meezan Bank sign-in screen. Any username and password will do; nothing is sent.
+
 1. The institution dropdown has one value, FBR. Type a bill reference of exactly 10 letters or digits, or tap a sample reference: 1234567890, 4567890123 or 7890123456. All of them, like anything typed, are looked up on the live API. Until the reference is valid, Look up stays disabled and the hint says what is wrong.
 2. Press Look up bill. The phone shows the bill: institution, bill reference and bill ID; the four components with their accounts and amounts; the total; and the status, Unpaid. So far the API has answered the same PKR 100,000 bill for every reference, echoing the reference back.
 3. Press Pay. The bill stays on screen with the status "Payment in screening". Nine dots appear under it, run to the middle one, which stands for screening, and pause there.
@@ -82,7 +84,7 @@ The page calls `/api/v1/billInquiry` and `/api/v1/billPayment` on its own server
 
 With every bill at PKR 100,000, the first two payments raise no alert, and from the third onward each is paid with an alert. "Stopped at screening" needs a bill of PKR 1,000,000 or more, which the API has not returned. The mock rules are listed in "How it decides" on the page and in [docs/plan.md](docs/plan.md#mock-screening). They are invented and are not real rule or typology logic.
 
-The back arrow on the bill goes back to the form with what you typed. Clear all resets the fields, the bill, the balance and the payment count, and stops a lookup or payment in progress.
+The back arrow on the bill goes back to the form with what you typed. Log out, on the form and on the bill, and Clear all both reset the fields, the bill, the balance and the payment count, stop a lookup or payment in progress, and return to the sign-in screen.
 
 ## Design
 

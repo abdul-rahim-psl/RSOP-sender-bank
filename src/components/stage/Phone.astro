@@ -11,7 +11,7 @@ import { BILL_REF_LENGTH, institutions, sampleRefs } from '../../data/bills';
   <span class="hw hw-vol-down" aria-hidden="true"></span>
   <span class="hw hw-power" aria-hidden="true"></span>
 
-  <div class="screen" data-screen="form" style={`--pc: var(--c-${account.color})`}>
+  <div class="screen" data-screen="login" style={`--pc: var(--c-${account.color})`}>
     <div class="sbar" aria-hidden="true">
       <span class="sbar-time" data-clock>09:41</span>
       <span class="island"></span>
@@ -23,13 +23,43 @@ import { BILL_REF_LENGTH, institutions, sampleRefs } from '../../data/bills';
       </svg>
     </div>
 
+    {/* Every visit starts here; the demo has no real sign-in, so any username and password will do. */}
+    <form class="scr scr-login" data-scr="login" data-login-form novalidate>
+      <div class="l-brand">
+        <span class="avatar" aria-hidden="true">{initials(account.provider)}</span>
+        <p class="w-hi">{account.provider}</p>
+        <p class="w-prov">Sign in to pay a bill</p>
+      </div>
+
+      <label class="w-field">
+        <span class="w-label">Username</span>
+        <input type="text" autocomplete="username" data-login-user />
+      </label>
+      <label class="w-field">
+        <span class="w-label">Password</span>
+        <input type="password" autocomplete="current-password" data-login-pass />
+      </label>
+
+      <p class="w-hint" id="l-hint" aria-live="polite" data-l-hint>Any username and password will do in this demo.</p>
+      <noscript><p class="w-hint">This demo needs JavaScript.</p></noscript>
+
+      <button class="send" type="submit" aria-describedby="l-hint">
+        <Icon name="lock" size={17} />
+        Sign in
+      </button>
+    </form>
+
     <form class="scr scr-form" data-scr="form" data-inquiry-form novalidate>
       <div class="w-head">
-        <span class="avatar" aria-hidden="true">{initials(account.name)}</span>
-        <div>
-          <p class="w-hi">Hi, {account.name.split(' ')[0]}</p>
+        <span class="avatar" aria-hidden="true" data-w-avatar>{initials(account.name)}</span>
+        <div class="w-who">
+          <p class="w-hi" data-w-hi>Hi, {account.name.split(' ')[0]}</p>
           <p class="w-prov">{account.provider}</p>
         </div>
+        <button class="w-out" type="button" data-logout>
+          <Icon name="logout" size={15} />
+          Log out
+        </button>
       </div>
 
       <div class="w-bal">
@@ -106,6 +136,9 @@ import { BILL_REF_LENGTH, institutions, sampleRefs } from '../../data/bills';
         </button>
         <p class="w-title">Bill</p>
         <span class="iso">creditor</span>
+        <button class="w-out icon" type="button" aria-label="Log out" data-logout>
+          <Icon name="logout" size={15} />
+        </button>
       </div>
 
       <dl class="bill-meta">

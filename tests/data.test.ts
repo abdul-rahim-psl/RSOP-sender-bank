@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { INTERDICT_AT, HIT_WEIGHT, rules, typologies } from '../src/data/network.ts';
 import { account, initials } from '../src/data/account.ts';
-import { BILL_REF_LENGTH, institutions, localBills, sampleBills } from '../src/data/bills.ts';
+import { BILL_REF_LENGTH, institutions, sampleRefs } from '../src/data/bills.ts';
 import { band } from '../src/lib/screen.ts';
 import { billInquiry, billPayment, billRefProblem, paymentRequest, toBill } from '../src/lib/biller.ts';
 import { endpoints } from '../src/data/api.ts';
@@ -59,36 +59,26 @@ test('a lookup posts the institution and trimmed reference to the API, and retur
   assert.equal(JSON.stringify(res), apiSample);
 });
 
-test('the invented demo bills answer locally, without calling the API', async () => {
+test('every lookup goes to the API, the sample references included', async () => {
   const { calls, post } = fakePost();
-  for (const ref of Object.keys(localBills)) {
-    const res = await billInquiry({ institution: 'FBR', billReference: ref }, post);
-    assert.equal(res.billReference, ref);
-  }
-  assert.deepEqual(calls, []);
-  assert.deepEqual(Object.keys(localBills), ['4567890123', '7890123456']);
+  for (const ref of sampleRefs) await billInquiry({ institution: 'FBR', billReference: ref }, post);
+  assert.deepEqual(
+    calls.map((c) => c.body),
+    sampleRefs.map((billReference) => ({ institution: 'FBR', billReference })),
+  );
 });
 
-test('the captured demo bill 1234567890 is what the API answered', () => {
-  assert.equal(JSON.stringify(sampleBills['1234567890']), apiSample);
+test('the sample references are valid', () => {
+  for (const ref of sampleRefs) assert.equal(billRefProblem(ref), null, ref);
 });
 
-test('every demo bill has a valid reference, adds up, and the account can pay it', () => {
-  for (const [ref, res] of Object.entries(sampleBills)) {
-    assert.equal(billRefProblem(ref), null, ref);
-    const bill = toBill('FBR', res)!;
-    assert.ok(bill, ref);
-    assert.equal(bill.billReference, ref);
-    assert.equal(bill.currency, 'PKR');
-    assert.equal(bill.components.length, 4);
-    assert.equal(bill.components.reduce((a, c) => a + c.amount, 0), bill.total, ref);
-    assert.ok(bill.total <= account.balance, ref);
-  }
-});
-
-test('the demo bills show each mock outcome once', () => {
-  const totals = Object.values(sampleBills).map((r) => Number(r.total));
-  assert.deepEqual(totals.map(band), [0, 1, 2]);
+test("the API's bill reads as a complete bill the account can pay", () => {
+  const bill = toBill('FBR', JSON.parse(apiSample))!;
+  assert.equal(bill.currency, 'PKR');
+  assert.equal(bill.components.length, 4);
+  assert.equal(bill.components.reduce((a, c) => a + c.amount, 0), bill.total);
+  assert.ok(bill.total <= account.balance);
+  assert.equal(band(bill.total), 0, 'on its own it raises no alert');
 });
 
 test('a bill reference is exactly 10 letters or digits', () => {
@@ -109,9 +99,12 @@ test('the page calls the API paths on its own server', () => {
   assert.equal(endpoints.billPayment, '/api/v1/billPayment');
 });
 
-test('paying a looked-up bill sends its ID, reference and total, as the API takes them', async () => {
+test('paying a looked-up bill posts its ID, reference and total to the API, as the API takes them', async () => {
   const bill = toBill('FBR', await billInquiry({ institution: 'FBR', billReference: '1234567890' }, fakePost().post))!;
   const req = paymentRequest(bill);
   assert.equal(JSON.stringify(req), '{"billId":"12345","billReference":"1234567890","totalAmount":"100000"}');
-  assert.equal(JSON.stringify(await billPayment(req)), '{"statusCode":0,"description":"SUCCESS"}');
+  const calls: { path: string; body: unknown }[] = [];
+  const post = async (path: string, body: unknown) => (calls.push({ path, body }), { statusCode: 0, description: 'SUCCESS' });
+  assert.deepEqual(await billPayment(req, post), { statusCode: 0, description: 'SUCCESS' });
+  assert.deepEqual(calls, [{ path: '/api/v1/billPayment', body: req }]);
 });

@@ -7,7 +7,8 @@
 - [Bill inquiry and payment](#bill-inquiry-and-payment)
   - [The API](#the-api)
   - [Bill payment](#bill-payment)
-  - [The mock](#the-mock)
+  - [The proxy](#the-proxy)
+  - [Lookups and payments](#lookups-and-payments)
 - [What changes from the reference screen](#what-changes-from-the-reference-screen)
 - [Layout](#layout)
 - [How a payment plays out](#how-a-payment-plays-out)
@@ -18,7 +19,7 @@
 
 ## Goal
 
-A one-screen, clickable demo of a sender-initiated bill payment. The phone is the whole page, centred and as tall as the window. On it, the account holder picks the institution (FBR), enters a 10-character bill reference, looks the bill up and pays it. The bill shows its component accounts; while paying, a message path shows the payment pass through screening before it reaches the biller, and each account then shows paid or not paid. It runs on mock data only and connects to nothing.
+A one-screen, clickable demo of a sender-initiated bill payment. The phone is the whole page, centred and as tall as the window. On it, the account holder picks the institution (FBR), enters a 10-character bill reference, looks the bill up and pays it. The bill shows its component accounts; while paying, a message path shows the payment pass through screening before it reaches the biller, and each account then shows paid or not paid. Bill lookups and payments go to RSOP's live API through a proxy on the demo's own server; the account balance and the screening are mock.
 
 ## Source and content rules
 
@@ -89,20 +90,33 @@ Sender-Participant-Code, Receiver-Participant-Code, Sender-User-Code, X-Request-
 - The body carries the bill ID, the bill reference and the total from the inquiry, all as strings.
 - Pay sends it only after the payment clears screening. A payment stopped at screening never reaches the biller.
 - `statusCode` 0 means paid. Any other code, or no answer, ends in "Payment failed" with the biller's description, and the balance is unchanged. Only SUCCESS has been seen so far.
-- The API's address is one setting, `API_BASE` in `src/data/api.ts`, set to `http://192.168.9.15:9991`. The page does not call it; see the CORS findings in [The API](#the-api).
+- Pay sends it live through the proxy below.
 
-### The mock
+### The proxy
 
-`billInquiry()` and `billPayment()` in `src/lib/biller.ts` take the same requests and return the same reply shapes. `billPayment()` answers `{"statusCode":0,"description":"SUCCESS"}`, as the API did. `billInquiry()` answers from `src/data/bills.ts`:
+The page calls `POST /api/v1/billInquiry` and `POST /api/v1/billPayment` on its own origin, so neither CORS nor Chrome's private-address rule applies. `server/bill-api.mjs` forwards both to the API:
 
-| Bill reference | Total | Source | Outcome |
-|---|---|---|---|
-| 1234567890 | PKR 100,000 | The API's reply, unchanged | No alert |
-| 4567890123 | PKR 450,000 | Invented, same 40/35/20/5 split and accounts | Alert, still paid |
-| 7890123456 | PKR 1,250,000 | Invented, same split and accounts | Stopped |
-| Any other valid reference | PKR 100,000 | The API's reply, with the reference echoed, as the live API does | No alert |
+- **Where it runs.** `npm run serve` (`server/serve.mjs`, on port 4393, serving `dist/` too) and `npm run dev` (through an Astro integration in `astro.config.mjs`).
+- **Settings.** `API_BASE`, default `http://192.168.9.15:9991`; the three participant codes; and `API_TIMEOUT_MS`, default 8,000. They are read from `.env`, which is git-ignored because the repo is public. `.env.example` lists them.
+- **What it adds.** `Charset: UTF-8`, the three participant-code headers and a fresh 32-hex-digit `X-Request-ID` per call.
+- **What it accepts.** Only the two paths, only `POST`, and only well-formed bodies: an inquiry with `institution` FBR and a 10-letter-or-digit reference, or a payment with a `billId` of letters, digits or hyphens, the same kind of reference, and a `totalAmount` string of digits with up to two decimals. It forwards just those fields. Anything else gets a 400 (or 405) without reaching the API. The tunnel makes this server public, so this keeps it from being used as a general way into the private network; it does not stop anyone with the link from sending well-formed payments.
+- **What it answers.** The API's status and body unchanged; 502 `API UNREACHABLE` when the API can't be reached in time; 500 `PROXY NOT CONFIGURED` when a participant code is missing. For a lookup the phone shows "Couldn't look the bill up (…). Try again."; for a payment, "Payment failed" with the description, and the balance unchanged.
+- **Logs.** One line per call to stdout: the reference, the API's status and the time taken. With `npm run serve` started as in the README, that's `~/sender-serve.log`.
 
-The mock matches on the bill reference only. A reply whose `statusCode` is not 0 still shows "No bill found" on the phone, though neither the mock nor the live API has produced one. Replacing `billInquiry()` and `billPayment()` with server-side calls to the API is the only change a live version needs.
+Verified live on 2026-10-21 at about 23:50 PKT, from `http://127.0.0.1:4393`: lookups through the proxy came back from `192.168.9.15` with HTTP 200 in 16 to 460 ms. With the API pointed at an address with nothing listening, the phone showed "Couldn't look the bill up (API UNREACHABLE). Try again."
+
+Verified on 2026-10-22 at about 00:00 PKT against a stand-in API on this laptop, so no real payments were sent: every completed payment sent exactly one `billPayment` with the bill's ID, reference and total; a payment cut short by Clear all sent none; and a declined payment showed "Payment failed · FBR: DECLINED BY BILLER · balance unchanged". A live payment through `192.168.9.15` could not be checked at 00:02 PKT: the lookup before it timed out.
+
+### Lookups and payments
+
+`billInquiry()` and `billPayment()` in `src/lib/biller.ts` post to the page's own server, which forwards them live. The three quick-fill references on the phone are just samples; they are looked up live like anything typed.
+
+| Call | What the API has answered so far |
+|---|---|
+| Bill inquiry, any reference | The same bill: ID 12345, PKR 100,000, four components, the reference echoed |
+| Bill payment | `{"statusCode":0,"description":"SUCCESS"}` |
+
+With every bill at PKR 100,000, payments alert only from the account's third payment onward, and none is stopped at screening. A lookup reply whose `statusCode` is not 0 shows "No bill found" on the phone; a payment reply whose `statusCode` is not 0 shows "Payment failed". The live API has produced neither.
 
 ## What changes from the reference screen
 
@@ -128,7 +142,7 @@ The phone has three screens: the bill form, a busy screen while looking up, and 
 
 ## How a payment plays out
 
-1. Pick the institution, FBR, and enter a 10-character bill reference, or tap one of the three demo bills.
+1. Pick the institution, FBR, and enter a 10-character bill reference, or tap one of the three sample references.
 2. Press Look up bill. The phone shows the bill: institution, bill reference and bill ID, the four components with their accounts, the total, and the status Unpaid.
 3. Press Pay. The status changes to "Payment in screening", and the dots under it light up to the middle one, which stands for screening.
 4. The payment pauses at the screening dot.
@@ -150,15 +164,15 @@ Each rule hit adds 100 to every typology that uses the rule. A typology alerts a
 
 ## Stack
 
-As in RSOP demo 2: Astro 7.3 with static output, strict TypeScript, hand-written CSS with RSOP's tokens, vanilla TypeScript in Astro `<script>` tags, EB Garamond and Nunito self-hosted, dark by default with a light toggle, and `npm run check` (`astro check` plus `node --test`).
+As in RSOP demo 2: Astro 7.3 with static output, plus a dependency-free Node server (`server/`) for the bill inquiry proxy; strict TypeScript, hand-written CSS with RSOP's tokens, vanilla TypeScript in Astro `<script>` tags, EB Garamond and Nunito self-hosted, dark by default with a light toggle, and `npm run check` (`astro check` plus `node --test`).
 
 ## Quality checks
 
 | Check | How |
 |---|---|
 | Builds cleanly | `npm run build` |
-| The mock answers like the API | `npm run check` compares bill 1234567890, and any other reference, with the captured reply byte for byte |
-| Data is sound | Rule and typology numbers are unique and three digits; every rule is used by a typology; every typology can reach interdiction; every demo bill adds up |
+| The calls match the API | `npm run check` checks what the page posts for a lookup and a payment, and what the proxy forwards: path, headers and fields |
+| Data is sound | Rule and typology numbers are unique and three digits; every rule is used by a typology; every typology can reach interdiction; the API's bill adds up |
 | Mock screening keeps its promises | `npm run check` runs every row of the table in [Mock screening](#mock-screening) |
 | Looks right | Screenshots in both themes, before a lookup, on the bill and after each outcome; a fit check at 15 window sizes that every phone screen fits without inner scrolling |
 | Accessible | axe-core in both themes; keyboard-only lookup and payment |
@@ -172,15 +186,13 @@ As in RSOP demo 2: Astro 7.3 with static output, strict TypeScript, hand-written
 | Where the message path goes | On the bill, from Pay onwards | Unconfirmed |
 | Phone-width windows | No frame; the app fills the window | Unconfirmed |
 | Keep a debtors list? | No; one fictional account holder | Confirmed 2026-10-21 |
-| Where the bill comes from | A local mock in the API's reply shape | Confirmed 2026-10-21 |
-| How Pay reaches billPayment | A local mock in the API's request and reply shape | Confirmed 2026-10-21 |
-| API address | One setting, `192.168.9.15:9991` | Confirmed 2026-10-21 |
+| Where the bill comes from | RSOP's live API through a proxy on the demo's server, for every reference | Confirmed 2026-10-22 |
+| How Pay reaches billPayment | RSOP's live API, through the same proxy | Confirmed 2026-10-22 |
+| API address | `API_BASE` in `.env`: `192.168.9.15:9991` | Confirmed 2026-10-22 |
 | When Pay calls billPayment | Only after screening passes | Confirmed 2026-10-21 |
 | A billPayment answer other than SUCCESS | "Payment failed" with the biller's description; balance unchanged | Unconfirmed |
 | Institution | A dropdown with FBR only | Confirmed 2026-10-21 |
 | Bill reference | Exactly 10 letters or digits | Confirmed 2026-10-21 |
-| Any other valid reference | The API's standard bill, as the live API answers | Unconfirmed |
-| Bills 4567890123 and 7890123456 | Invented to reach the alert and stopped outcomes | Unconfirmed |
 | Screening bands | Alert from PKR 250,000; stopped from PKR 1,000,000 | Unconfirmed |
-| Paying the same bill twice | Allowed; the mock does not mark bills paid | Unconfirmed |
+| Paying the same bill twice | Allowed by the phone | Unconfirmed |
 | Where screening happens in the path | At the middle dot, before the biller | Unconfirmed |

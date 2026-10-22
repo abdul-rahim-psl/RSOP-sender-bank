@@ -1,11 +1,9 @@
-// The bill inquiry and bill payment the phone makes. The inquiry goes to the live API through the page's own server;
-// the payment is still a mock in the API's exact shape, so a real call can replace that one function alone.
+// The bill inquiry and bill payment the phone makes. Both go to RSOP's live API through the page's own server,
+// which adds the headers the API needs (server/bill-api.mjs).
 
 import { endpoints } from '../data/api.ts';
 import {
   BILL_REF_LENGTH,
-  localBills,
-  paymentSuccess,
   type BillInquiryRequest,
   type BillInquiryResponse,
   type BillPaymentRequest,
@@ -37,17 +35,15 @@ export async function postJson(path: string, body: unknown): Promise<unknown> {
   return data;
 }
 
-/** The invented demo bills answer locally; every other reference is looked up on the live API. */
+/** Looks the bill up on the live API, through the page's own server. */
 export async function billInquiry(req: BillInquiryRequest, post: Post = postJson): Promise<BillInquiryResponse> {
-  const ref = req.billReference.trim();
-  const local = localBills[ref];
-  if (local) return structuredClone(local);
-  return (await post(endpoints.billInquiry, { institution: req.institution, billReference: ref })) as BillInquiryResponse;
+  const body = { institution: req.institution, billReference: req.billReference.trim() };
+  return (await post(endpoints.billInquiry, body)) as BillInquiryResponse;
 }
 
-/** Answers like POST /api/v1/billPayment did for the one payment seen so far: SUCCESS. */
-export async function billPayment(_req: BillPaymentRequest): Promise<BillPaymentResponse> {
-  return structuredClone(paymentSuccess);
+/** Pays the bill on the live API, through the page's own server. */
+export async function billPayment(req: BillPaymentRequest, post: Post = postJson): Promise<BillPaymentResponse> {
+  return (await post(endpoints.billPayment, req)) as BillPaymentResponse;
 }
 
 /** The billPayment body for a looked-up bill. */

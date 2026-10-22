@@ -1,4 +1,4 @@
-// The bill inquiry proxy forwards only a well-formed inquiry, with the headers the API requires.
+// The bill API proxy forwards only well-formed inquiries and payments, with the headers the API requires.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -60,7 +60,7 @@ test('refuses anything but a well-formed FBR inquiry, without calling the API', 
   ])
     assert.equal((await p.call(body)).status, 400, JSON.stringify(body));
   assert.equal((await p.call(null, 'GET')).status, 405);
-  assert.equal((await p.call({}, 'POST', '/api/v1/billPayment')).status, 404, 'other paths are not forwarded');
+  assert.equal((await p.call({}, 'POST', '/api/v1/billStatus')).status, 404, 'other paths are not forwarded');
   assert.equal(p.sent.length, 0);
   await p.close();
 });
@@ -80,6 +80,33 @@ test('passes the API status through, and answers 502 when the API cannot be reac
 test('refuses to forward when the participant codes are not configured', async () => {
   const p = await start(ok, { ...config, senderUserCode: '' });
   assert.equal((await p.call({ institution: 'FBR', billReference: '1234567890' })).status, 500);
+  assert.equal(p.sent.length, 0);
+  await p.close();
+});
+
+test('forwards a valid payment with the required headers and only its three fields', async () => {
+  const p = await start(ok);
+  const pay = { billId: '12345', billReference: '1234567890', totalAmount: '100000', balance: 'dropped' };
+  const res = await p.call(pay, 'POST', '/api/v1/billPayment');
+  assert.equal(res.status, 200);
+  assert.equal(await res.text(), '{"statusCode":0,"description":"SUCCESS"}');
+  const { url, init } = p.sent[0]!;
+  assert.equal(url, 'http://api.test/api/v1/billPayment');
+  assert.equal((init.headers as Record<string, string>).Charset, 'UTF-8');
+  assert.equal(init.body, '{"billId":"12345","billReference":"1234567890","totalAmount":"100000"}');
+  await p.close();
+});
+
+test('refuses a malformed payment without calling the API', async () => {
+  const p = await start(ok);
+  for (const body of [
+    { billId: '12345', billReference: '123', totalAmount: '100000' },
+    { billId: '12345', billReference: '1234567890', totalAmount: '-5' },
+    { billId: '12345', billReference: '1234567890', totalAmount: 100000 },
+    { billId: '', billReference: '1234567890', totalAmount: '100000' },
+    { billId: '12 34', billReference: '1234567890', totalAmount: '100000' },
+  ])
+    assert.equal((await p.call(body, 'POST', '/api/v1/billPayment')).status, 400, JSON.stringify(body));
   assert.equal(p.sent.length, 0);
   await p.close();
 });

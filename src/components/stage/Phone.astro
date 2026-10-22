@@ -3,7 +3,7 @@ import Icon from '../Icon.astro';
 import Light from '../Light.astro';
 import Path from './Path.astro';
 import { account, initials } from '../../data/account';
-import { BILL_REF_LENGTH, institutions, sampleBills } from '../../data/bills';
+import { BILL_REF_LENGTH, institutions, sampleRefs } from '../../data/bills';
 ---
 
 <div class="phone" role="group" aria-label="Sender's phone">
@@ -65,15 +65,15 @@ import { BILL_REF_LENGTH, institutions, sampleBills } from '../../data/bills';
         />
       </label>
 
-      <div class="w-quick" role="group" aria-label="Demo bills">
-        <span class="w-quick-label" aria-hidden="true">Demo bills</span>
+      <div class="w-quick" role="group" aria-label="Sample references">
+        <span class="w-quick-label" aria-hidden="true">Sample references</span>
         {
-          Object.keys(sampleBills).map((ref) => (
+          sampleRefs.map((ref) => (
             <button
               class="w-chip"
               type="button"
               aria-pressed="false"
-              aria-label={`Demo bill ${ref} at ${institutions[0]}`}
+              aria-label={`Sample reference ${ref}`}
               data-sample={ref}
             >
               {ref}

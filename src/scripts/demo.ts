@@ -218,17 +218,20 @@ async function pay() {
     sub = `Ref ${id} · balance unchanged`;
   } else {
     q('[data-b-status-sub]').textContent = `Sending the payment to ${b.institution}…`;
-    const [reply] = await Promise.all([billPayment(paymentRequest(b)).catch(() => null), sleep(600)]);
+    const [reply] = await Promise.all([
+      billPayment(paymentRequest(b)).catch((e: Error) => ({ statusCode: -1, description: e.message })),
+      sleep(600),
+    ]);
     if (token !== run) return;
-    const accepted = reply?.statusCode === 0;
+    const accepted = reply.statusCode === 0;
     if (!(await toBiller(accepted, token))) return;
     if (accepted) {
       balance = Math.round((balance - b.total) * 100) / 100;
       stage = res.adjudicator === 'ALRT' ? 'alert' : 'paid';
-      sub = `Ref ${id} · ${b.institution}: ${reply!.description}`;
+      sub = `Ref ${id} · ${b.institution}: ${reply.description}`;
     } else {
       stage = 'failed';
-      sub = `${b.institution}: ${reply?.description || 'no answer'} · balance unchanged`;
+      sub = `${b.institution}: ${reply.description || 'no answer'} · balance unchanged`;
     }
   }
   renderBill(b, stage, sub);

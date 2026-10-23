@@ -69,7 +69,7 @@ The page calls `/api/v1/billInquiry` and `/api/v1/billPayment` on its own server
 
 ## How it behaves
 
-The phone always opens on the Meezan Bank sign-in screen. Any username and password are accepted; nothing is sent.
+The phone always opens on the XYZ Bank sign-in screen. Any username and password are accepted; nothing is sent.
 
 1. The institution dropdown has one value, FBR. Type a bill reference of exactly 10 letters or digits; it is looked up on the live API. Until the reference is valid, Look up stays disabled and the hint says what is wrong.
 2. Press Look up bill. The phone shows the bill: institution, bill reference and bill ID; the four components with their accounts and amounts; the total; and the status, Unpaid. So far the API has answered the same PKR 100,000 bill for every reference, echoing the reference back.

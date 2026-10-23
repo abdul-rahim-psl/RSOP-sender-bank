@@ -14,7 +14,7 @@ export interface Account {
 
 export const account: Account = {
   name: 'Bilal Siddiqui',
-  provider: 'Meezan Bank',
+  provider: 'XYZ Bank',
   accountNo: '01570103482468',
   color: 'blue',
   balance: 2_500_000,

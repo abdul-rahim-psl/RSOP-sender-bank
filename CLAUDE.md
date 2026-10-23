@@ -1,6 +1,6 @@
 # sender-initiate
 
-A phone-only demo of a sender-initiated bill payment: a Meezan Bank app that looks up and pays an FBR bill on RSOP's live `billInquiry` / `billPayment` API, through the proxy in `server/bill-api.mjs`. The API needs the VPN.
+A phone-only demo of a sender-initiated bill payment: a XYZ Bank app that looks up and pays an FBR bill on RSOP's live `billInquiry` / `billPayment` API, through the proxy in `server/bill-api.mjs`. The API needs the VPN.
 
 - `npm run check`: type check plus the tests in `tests/`. Run it after every change.
 - `server/serve.mjs` (the :4393 preview and tunnel) serves the built `dist/`. Run `npm run build` after a change, or the preview shows the old page.

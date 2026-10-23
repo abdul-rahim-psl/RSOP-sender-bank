@@ -25,9 +25,13 @@ const types = {
 };
 
 // The same hosts the Vite servers accept: this machine and the tunnel.
+// A deployment adds its own hosts, comma-separated, e.g. ALLOWED_HOSTS=10.0.150.35.
+const extraHosts = (process.env.ALLOWED_HOSTS || '').split(',').map((h) => h.trim()).filter(Boolean);
 const allowedHost = (h = '') => {
   const name = h.replace(/:\d+$/, '');
-  return name === '127.0.0.1' || name === 'localhost' || name.endsWith('.trycloudflare.com') || name.endsWith('.devtunnels.ms');
+  return (
+    name === '127.0.0.1' || name === 'localhost' || name.endsWith('.trycloudflare.com') || name.endsWith('.devtunnels.ms') || extraHosts.includes(name)
+  );
 };
 
 async function serveFile(req, res) {
